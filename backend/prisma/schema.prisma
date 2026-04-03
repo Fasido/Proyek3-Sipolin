@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // <--- GUE BALIKIN INI BIAR SUPABASE AMAN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  nim           String    @unique
+  phone         String?
+  role          String    @default("user")
+  ktmImage      String?
+  isVerified    Boolean   @default(false)
+  vehicleInfo   String?
+  avatar        String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relasi (Nama tetap simpel biar backend nggak error)
+  orders        Order[]   @relation("customer")
+  tripsAsDriver Order[]   @relation("driver")
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Order {
+  id            String    @id @default(cuid())
+  type          String    // TEBENGAN or JASTIP
+  title         String
+  description   String?
+  price         Float     @default(0)
+  status        String    @default("pending")
+  
+  pickup        String    // Titik jemput di Polindra
+  destination   String    // Tujuan
+  
+  customerId    String
+  customer      User      @relation("customer", fields: [customerId], references: [id], onDelete: Cascade)
+  
+  driverId      String?
+  driver        User?     @relation("driver", fields: [driverId], references: [id], onDelete: SetNull)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  completedAt   DateTime?
+
+  @@map("orders")
+}
+
+model Notification {
+  id             String   @id @default(cuid())
+  title          String
+  message        String
+  type           String   // order_request, order_accepted, system
+  isRead         Boolean  @default(false)
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relatedOrderId String?  // ID Order yang bersangkutan
+  createdAt      DateTime @default(now())
+
+  @@map("notifications")
+}

@@ -1,0 +1,46 @@
+{
+  "name": "sipolin-mobile",
+  "version": "1.0.0",
+  "description": "Sipolin Mobile App",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "dependencies": {
+    "@expo/metro-config": "^55.0.11",
+    "@expo/metro-runtime": "~55.0.9",
+    "@react-native-picker/picker": "^2.11.4",
+    "axios": "^1.6.0",
+    "expo": "^55.0.9",
+    "expo-constants": "~55.0.9",
+    "expo-document-picker": "~55.0.9",
+    "expo-image-picker": "~55.0.14",
+    "expo-linear-gradient": "^55.0.9",
+    "expo-linking": "~55.0.9",
+    "expo-router": "~55.0.8",
+    "expo-secure-store": "~55.0.9",
+    "expo-status-bar": "~55.0.4",
+    "lucide-react-native": "^1.7.0",
+    "nativewind": "^2.0.11",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-native": "0.83.4",
+    "react-native-gesture-handler": "~2.30.0",
+    "react-native-reanimated": "4.2.1",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-screens": "~4.23.0",
+    "react-native-svg": "^15.15.4",
+    "react-native-web": "^0.21.0",
+    "react-native-worklets": "^0.8.1",
+    "react-native-worklets-core": "^1.6.3",
+    "tailwindcss": "3.3.2"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.10",
+    "typescript": "^5"
+  },
+  "private": true
+}
