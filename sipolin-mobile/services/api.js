@@ -1,17 +1,17 @@
-import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // ─── Base URL ─────────────────────────────────────────────────────────────────
-const BASE_URL = 'http://192.168.0.105:3000/api';
+const BASE_URL = "http://10.0.171.88:3000/api";
 
-const TOKEN_KEY = '@sipolin_token';
+const TOKEN_KEY = "@sipolin_token";
 
 // ─── Axios Instance ───────────────────────────────────────────────────────────
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 15000,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -24,7 +24,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // ─── Response Interceptor: handle 401 ────────────────────────────────────────
@@ -35,14 +35,14 @@ api.interceptors.response.use(
       await AsyncStorage.removeItem(TOKEN_KEY);
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // ─── Token Manager ────────────────────────────────────────────────────────────
 export const tokenManager = {
-  getToken:    ()      => AsyncStorage.getItem(TOKEN_KEY),
-  setToken:    (token) => AsyncStorage.setItem(TOKEN_KEY, token),
-  removeToken: ()      => AsyncStorage.removeItem(TOKEN_KEY),
+  getToken: () => AsyncStorage.getItem(TOKEN_KEY),
+  setToken: (token) => AsyncStorage.setItem(TOKEN_KEY, token),
+  removeToken: () => AsyncStorage.removeItem(TOKEN_KEY),
 };
 
 // ─── Auth API ─────────────────────────────────────────────────────────────────
@@ -59,8 +59,17 @@ export const authAPI = {
    * @param {string} [plateNumber] - Required when role === 'driver'
    * @param {string} [vehicleDetail] - Required when role === 'driver'
    */
-  register: (email, password, name, nim, phone, role = 'user', plateNumber = null, vehicleDetail = null) =>
-    api.post('/auth/register', {
+  register: (
+    email,
+    password,
+    name,
+    nim,
+    phone,
+    role = "user",
+    plateNumber = null,
+    vehicleDetail = null,
+  ) =>
+    api.post("/auth/register", {
       email,
       password,
       name,
@@ -71,39 +80,34 @@ export const authAPI = {
       vehicleDetail,
     }),
 
-  login: (email, password) =>
-    api.post('/auth/login', { email, password }),
+  login: (email, password) => api.post("/auth/login", { email, password }),
 
-  refresh: (token) =>
-    api.post('/auth/refresh', { token }),
+  refresh: (token) => api.post("/auth/refresh", { token }),
 };
 
 // ─── Users API ────────────────────────────────────────────────────────────────
 export const usersAPI = {
-  getProfile: () =>
-    api.get('/users/profile'),
+  getProfile: () => api.get("/users/profile"),
 
-  updateProfile: (data) =>
-    api.put('/users/profile', data),
+  updateProfile: (data) => api.put("/users/profile", data),
 
-  getStats: () =>
-    api.get('/users/stats'),
+  getStats: () => api.get("/users/stats"),
 };
 
 // ─── Orders API (scaffold) ────────────────────────────────────────────────────
 export const ordersAPI = {
-  getAll:    (params) => api.get('/orders', { params }),
-  getById:   (id)     => api.get(`/orders/${id}`),
-  create:    (data)   => api.post('/orders', data),
-  update:    (id, data) => api.put(`/orders/${id}`, data),
-  delete:    (id)     => api.delete(`/orders/${id}`),
+  getAll: (params) => api.get("/orders", { params }),
+  getById: (id) => api.get(`/orders/${id}`),
+  create: (data) => api.post("/orders", data),
+  update: (id, data) => api.put(`/orders/${id}`, data),
+  delete: (id) => api.delete(`/orders/${id}`),
 };
 
 // ─── Notifications API (scaffold) ─────────────────────────────────────────────
 export const notificationsAPI = {
-  getAll:   ()   => api.get('/notifications'),
+  getAll: () => api.get("/notifications"),
   markRead: (id) => api.put(`/notifications/${id}/read`),
-  markAllRead: () => api.put('/notifications/read-all'),
+  markAllRead: () => api.put("/notifications/read-all"),
 };
 
 export default api;
