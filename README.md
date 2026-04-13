@@ -4,6 +4,10 @@ Sipolin adalah aplikasi mobile lengkap untuk manajemen laporan online dengan fit
 
 ## Arsitektur Project
 
+
+
+const API_BASE_URL = 'http://192.168.0.105:3000';
+
 Proyek ini adalah monorepo dengan dua bagian utama:
 
 ### 1. Backend API (`/backend`)

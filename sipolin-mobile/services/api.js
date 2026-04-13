@@ -1,88 +1,84 @@
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// GANTI IP DI BAWAH INI sesuai IP yang muncul di terminal Expo kamu!
-// Saat ini saya set ke IP laptop kamu: 192.168.43.148
-const API_BASE_URL = 'http://192.168.110.27:3000';
+// ─── Base URL ─────────────────────────────────────────────────────────────────
+const BASE_URL = 'http://192.168.0.105:3000/api';
 
+const TOKEN_KEY = '@sipolin_token';
+
+// ─── Axios Instance ───────────────────────────────────────────────────────────
 const api = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
-  timeout: 10000,
+  baseURL: BASE_URL,
+  timeout: 15000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-// Interceptor untuk menambahkan token otomatis di setiap request
+// ─── Request Interceptor: attach token ───────────────────────────────────────
 api.interceptors.request.use(
   async (config) => {
-    try {
-      // CEK PLATFORM: Kalau Web pakai localStorage, kalau HP pakai SecureStore
-      let token;
-      if (Platform.OS === 'web') {
-        token = localStorage.getItem('authToken');
-      } else {
-        token = await SecureStore.getItemAsync('authToken');
-      }
-
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    } catch (error) {
-      console.error('[API] Failed to get token:', error);
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
+  (error) => Promise.reject(error)
+);
+
+// ─── Response Interceptor: handle 401 ────────────────────────────────────────
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      await AsyncStorage.removeItem(TOKEN_KEY);
+    }
     return Promise.reject(error);
   }
 );
 
-// ==========================================
-// 1. AUTH API
-// ==========================================
+// ─── Token Manager ────────────────────────────────────────────────────────────
+export const tokenManager = {
+  getToken:    ()      => AsyncStorage.getItem(TOKEN_KEY),
+  setToken:    (token) => AsyncStorage.setItem(TOKEN_KEY, token),
+  removeToken: ()      => AsyncStorage.removeItem(TOKEN_KEY),
+};
+
+// ─── Auth API ─────────────────────────────────────────────────────────────────
 export const authAPI = {
-  register: (email, password, name, nim, phone, role = 'user') =>
-    api.post('/auth/register', { email, password, name, nim, phone, role }),
+  /**
+   * Register a new user (Mahasiswa or Mitra Driver).
+   *
+   * @param {string} email
+   * @param {string} password
+   * @param {string} name
+   * @param {string} nim
+   * @param {string} phone
+   * @param {string} role          - 'user' | 'driver'
+   * @param {string} [plateNumber] - Required when role === 'driver'
+   * @param {string} [vehicleDetail] - Required when role === 'driver'
+   */
+  register: (email, password, name, nim, phone, role = 'user', plateNumber = null, vehicleDetail = null) =>
+    api.post('/auth/register', {
+      email,
+      password,
+      name,
+      nim,
+      phone,
+      role,
+      plateNumber,
+      vehicleDetail,
+    }),
 
   login: (email, password) =>
     api.post('/auth/login', { email, password }),
 
-  refreshToken: (token) =>
+  refresh: (token) =>
     api.post('/auth/refresh', { token }),
 };
 
-// ==========================================
-// 2. ORDERS API (TEBENGAN & JASTIP)
-// ==========================================
-export const ordersAPI = {
-  create: (data) =>
-    api.post('/orders', data),
-
-  list: (filters) =>
-    api.get('/orders', { params: filters }),
-
-  getDetail: (id) =>
-    api.get(`/orders/${id}`),
-
-  update: (id, data) =>
-    api.put(`/orders/${id}`, data),
-
-  delete: (id) =>
-    api.delete(`/orders/${id}`),
-
-  acceptOrder: (id) =>
-    api.post(`/orders/${id}/accept`),
-
-  completeOrder: (id) =>
-    api.post(`/orders/${id}/complete`),
-
-  // Menuju route /available yang ada di backend
-  getAvailableOrders: () =>
-    api.get('/orders/available'),
-};
-
-// ==========================================
-// 3. USERS API
-// ==========================================
+// ─── Users API ────────────────────────────────────────────────────────────────
 export const usersAPI = {
   getProfile: () =>
     api.get('/users/profile'),
@@ -92,55 +88,22 @@ export const usersAPI = {
 
   getStats: () =>
     api.get('/users/stats'),
-
-  verifyDriver: (ktmImage, vehicleInfo) =>
-    api.post('/users/verify-driver', { ktmImage, vehicleInfo }),
-
-  getDriverStats: () =>
-    api.get('/users/driver-stats'),
 };
 
-// ==========================================
-// 4. NOTIFICATIONS API
-// ==========================================
+// ─── Orders API (scaffold) ────────────────────────────────────────────────────
+export const ordersAPI = {
+  getAll:    (params) => api.get('/orders', { params }),
+  getById:   (id)     => api.get(`/orders/${id}`),
+  create:    (data)   => api.post('/orders', data),
+  update:    (id, data) => api.put(`/orders/${id}`, data),
+  delete:    (id)     => api.delete(`/orders/${id}`),
+};
+
+// ─── Notifications API (scaffold) ─────────────────────────────────────────────
 export const notificationsAPI = {
-  list: (limit = 20) =>
-    api.get('/notifications', { params: { limit } }),
-
-  markAsRead: (id) =>
-    api.put(`/notifications/${id}/read`),
-
-  markAllAsRead: () =>
-    api.put('/notifications/read-all'),
-
-  delete: (id) =>
-    api.delete(`/notifications/${id}`),
-};
-
-// ==========================================
-// 5. TOKEN MANAGEMENT (SECURE STORAGE / LOCAL STORAGE)
-// ==========================================
-export const tokenManager = {
-  setToken: async (token) => {
-    if (Platform.OS === 'web') {
-      return localStorage.setItem('authToken', token);
-    }
-    return SecureStore.setItemAsync('authToken', token);
-  },
-
-  getToken: async () => {
-    if (Platform.OS === 'web') {
-      return localStorage.getItem('authToken');
-    }
-    return SecureStore.getItemAsync('authToken');
-  },
-
-  removeToken: async () => {
-    if (Platform.OS === 'web') {
-      return localStorage.removeItem('authToken');
-    }
-    return SecureStore.deleteItemAsync('authToken');
-  },
+  getAll:   ()   => api.get('/notifications'),
+  markRead: (id) => api.put(`/notifications/${id}/read`),
+  markAllRead: () => api.put('/notifications/read-all'),
 };
 
 export default api;

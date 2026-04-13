@@ -9,54 +9,79 @@ const prisma = new PrismaClient();
 // Register
 router.post('/register', async (req, res) => {
   try {
-    // UPDATE: Tangkap 'nim' dari req.body
-    const { email, password, name, phone, department, nim } = req.body;
+    const {
+      email,
+      password,
+      name,
+      nim,
+      phone,
+      role,
+      plateNumber,
+      vehicleDetail,
+    } = req.body;
 
-    // UPDATE: Validasi agar NIM wajib diisi
+    // Validasi field wajib
     if (!email || !password || !name || !nim) {
-      return res.status(400).json({ error: 'Email, password, name, and NIM are required' });
+      return res
+        .status(400)
+        .json({ error: 'Email, password, name, and NIM are required' });
     }
 
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    // Validasi tambahan untuk Mitra Driver
+    if (role === 'driver' && (!plateNumber || !vehicleDetail)) {
+      return res
+        .status(400)
+        .json({ error: 'plateNumber and vehicleDetail are required for drivers' });
+    }
+
+    // Cek apakah email atau NIM sudah terdaftar
+    const existingUser = await prisma.user.findFirst({
+      where: { OR: [{ email }, { nim }] },
+    });
     if (existingUser) {
-      return res.status(409).json({ error: 'User already exists' });
+      const field = existingUser.email === email ? 'Email' : 'NIM';
+      return res.status(409).json({ error: `${field} sudah terdaftar` });
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Buat user baru
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
-        phone,
-        department,
-        nim, // UPDATE: Masukkan NIM ke database Prisma
+        nim,
+        phone:         phone         ?? null,
+        role:          role          ?? 'user',
+        plateNumber:   role === 'driver' ? (plateNumber ?? null)   : null,
+        vehicleDetail: role === 'driver' ? (vehicleDetail ?? null) : null,
       },
     });
 
-    // Generate token
+    // Generate JWT
     const token = jwt.sign(
       { userId: user.id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    res.status(201).json({
+    return res.status(201).json({
       token,
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        nim: user.nim, // Opsional: kirim balik data NIM
+        id:            user.id,
+        email:         user.email,
+        name:          user.name,
+        nim:           user.nim,
+        role:          user.role,
+        plateNumber:   user.plateNumber,
+        vehicleDetail: user.vehicleDetail,
       },
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Registration failed' });
+    console.error('[Register Error]:', error);
+    return res.status(500).json({ error: 'Registration failed' });
   }
 });
 
@@ -85,17 +110,18 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    res.json({
+    return res.json({
       token,
       user: {
-        id: user.id,
+        id:    user.id,
         email: user.email,
-        name: user.name,
+        name:  user.name,
+        role:  user.role,
       },
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Login failed' });
+    console.error('[Login Error]:', error);
+    return res.status(500).json({ error: 'Login failed' });
   }
 });
 
@@ -123,10 +149,10 @@ router.post('/refresh', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    res.json({ token: newToken });
+    return res.json({ token: newToken });
   } catch (error) {
-    console.error(error);
-    res.status(401).json({ error: 'Token refresh failed' });
+    console.error('[Refresh Error]:', error);
+    return res.status(401).json({ error: 'Token refresh failed' });
   }
 });
 
