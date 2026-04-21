@@ -1,40 +1,42 @@
+/**
+ * services/api.js — SIPOLIN API Service Layer
+ * ─────────────────────────────────────────────
+ * Centralised Axios instance with:
+ *   • Auto token attachment
+ *   • 401 cleanup
+ *   • All domain API namespaces
+ */
+
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// ─── Base URL ─────────────────────────────────────────────────────────────────
-const BASE_URL = 'http://192.168.0.105:3000/api';
-
-const TOKEN_KEY = '@sipolin_token';
+// ─── Config ───────────────────────────────────────────────────────────────────
+const BASE_URL   = 'http://10.0.166.127:3000/api';
+const TOKEN_KEY  = '@sipolin_token';
 
 // ─── Axios Instance ───────────────────────────────────────────────────────────
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  timeout: 15_000,
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// ─── Request Interceptor: attach token ───────────────────────────────────────
+// ─── Request Interceptor: attach Bearer token ─────────────────────────────────
 api.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem(TOKEN_KEY);
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
-  (error) => Promise.reject(error)
+  (err) => Promise.reject(err)
 );
 
-// ─── Response Interceptor: handle 401 ────────────────────────────────────────
+// ─── Response Interceptor: clear token on 401 ────────────────────────────────
 api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      await AsyncStorage.removeItem(TOKEN_KEY);
-    }
-    return Promise.reject(error);
+  (res) => res,
+  async (err) => {
+    if (err.response?.status === 401) await AsyncStorage.removeItem(TOKEN_KEY);
+    return Promise.reject(err);
   }
 );
 
@@ -47,63 +49,82 @@ export const tokenManager = {
 
 // ─── Auth API ─────────────────────────────────────────────────────────────────
 export const authAPI = {
-  /**
-   * Register a new user (Mahasiswa or Mitra Driver).
-   *
-   * @param {string} email
-   * @param {string} password
-   * @param {string} name
-   * @param {string} nim
-   * @param {string} phone
-   * @param {string} role          - 'user' | 'driver'
-   * @param {string} [plateNumber] - Required when role === 'driver'
-   * @param {string} [vehicleDetail] - Required when role === 'driver'
-   */
   register: (email, password, name, nim, phone, role = 'user', plateNumber = null, vehicleDetail = null) =>
-    api.post('/auth/register', {
-      email,
-      password,
-      name,
-      nim,
-      phone,
-      role,
-      plateNumber,
-      vehicleDetail,
-    }),
-
-  login: (email, password) =>
-    api.post('/auth/login', { email, password }),
-
-  refresh: (token) =>
-    api.post('/auth/refresh', { token }),
+    api.post('/auth/register', { email, password, name, nim, phone, role, plateNumber, vehicleDetail }),
+  login:   (email, password) => api.post('/auth/login', { email, password }),
+  refresh: (token)           => api.post('/auth/refresh', { token }),
 };
 
 // ─── Users API ────────────────────────────────────────────────────────────────
 export const usersAPI = {
+  /** Fetch the authenticated user's own profile */
   getProfile: () =>
     api.get('/users/profile'),
 
+  /** Update name, phone, nim */
   updateProfile: (data) =>
     api.put('/users/profile', data),
 
+  /** Upload profile picture (base64 data URI or HTTPS URL) */
+  updateProfilePicture: (imageData) =>
+    api.put('/users/profile-picture', { profilePicture: imageData }),
+
+  /** Remove profile picture */
+  removeProfilePicture: () =>
+    api.delete('/users/profile-picture'),
+
+  /**
+   * ★ Driver → push current GPS coordinates to the server.
+   *   Called every ~5 seconds from useDriverLocation hook.
+   *
+   * @param {{ latitude: number, longitude: number }} coords
+   * @returns {Promise<{ success: boolean, latitude: number, longitude: number, updatedAt: string }>}
+   */
+  updateLocation: ({ latitude, longitude }) =>
+    api.put('/users/location', { latitude, longitude }),
+
+  /**
+   * ★ Customer → poll a driver's latest coordinates.
+   *   Called every POLL_INTERVAL ms from the tracking screen.
+   *
+   * @param {string} driverUserId — the driver's user ID (from Order.driverId)
+   * @returns {Promise<DriverLocationResponse>} see typedef below
+   *
+   * @typedef {Object} DriverLocationResponse
+   * @property {string}       driverId
+   * @property {string}       name
+   * @property {string|null}  phone
+   * @property {string|null}  vehicleDetail
+   * @property {string|null}  plateNumber
+   * @property {string|null}  profilePicture
+   * @property {boolean}      isVerified
+   * @property {number|null}  latitude
+   * @property {number|null}  longitude
+   * @property {string|null}  locationUpdatedAt  ISO-8601
+   * @property {boolean}      isOnline
+   */
+  getDriverLocation: (driverUserId) =>
+    api.get(`/users/${driverUserId}/location`),
+
+  /** Aggregated stats (orders, notifications) */
   getStats: () =>
     api.get('/users/stats'),
 };
 
-// ─── Orders API (scaffold) ────────────────────────────────────────────────────
+// ─── Orders API ───────────────────────────────────────────────────────────────
 export const ordersAPI = {
-  getAll:    (params) => api.get('/orders', { params }),
-  getById:   (id)     => api.get(`/orders/${id}`),
-  create:    (data)   => api.post('/orders', data),
-  update:    (id, data) => api.put(`/orders/${id}`, data),
-  delete:    (id)     => api.delete(`/orders/${id}`),
+  getAll:  (params)   => api.get('/orders', { params }),
+  getById: (id)       => api.get(`/orders/${id}`),
+  create:  (data)     => api.post('/orders', data),
+  update:  (id, data) => api.put(`/orders/${id}`, data),
+  delete:  (id)       => api.delete(`/orders/${id}`),
 };
 
-// ─── Notifications API (scaffold) ─────────────────────────────────────────────
+// ─── Notifications API ────────────────────────────────────────────────────────
 export const notificationsAPI = {
-  getAll:   ()   => api.get('/notifications'),
-  markRead: (id) => api.put(`/notifications/${id}/read`),
-  markAllRead: () => api.put('/notifications/read-all'),
+  getAll:      ()   => api.get('/notifications'),
+  markRead:    (id) => api.put(`/notifications/${id}/read`),
+  markAllRead: ()   => api.put('/notifications/read-all'),
 };
 
 export default api;

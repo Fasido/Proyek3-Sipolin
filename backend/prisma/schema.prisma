@@ -9,24 +9,31 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String
-  name          String
-  nim           String    @unique
-  phone         String?
-  role          String    @default("user")
-  ktmImage      String?
-  isVerified    Boolean   @default(false)
-  vehicleInfo   String?
-  plateNumber   String?   // Plat nomor kendaraan (khusus Mitra Driver)
-  vehicleDetail String?   // Jenis & warna motor (khusus Mitra Driver)
-  avatar        String?
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  email          String    @unique
+  password       String
+  name           String
+  nim            String    @unique
+  phone          String?
+  role           String    @default("user")
+  ktmImage       String?
+  isVerified     Boolean   @default(false)
+  vehicleInfo    String?
+  plateNumber    String?
+  vehicleDetail  String?
+  avatar         String?
+  profilePicture String?
 
-  // Relasi
+  // ── Real-Time Location (written by driver, read by customer) ──────────────
+  latitude          Float?    // WGS-84 decimal degrees
+  longitude         Float?    // WGS-84 decimal degrees
+  locationUpdatedAt DateTime? // Staleness guard — diff > 30s → driver offline
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
   orders        Order[]        @relation("customer")
   tripsAsDriver Order[]        @relation("driver")
   notifications Notification[]

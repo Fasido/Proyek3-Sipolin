@@ -3,8 +3,8 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      'nativewind/babel',
-      'react-native-reanimated/plugin', // Cukup ini saja, dia sudah bawa Worklets
+      // ... plugin lain kalau ada (misal tailwind/nativewind)
+      'react-native-reanimated/plugin', // WAJIB DI BARIS TERAKHIR PLUGIN
     ],
   };
 };
