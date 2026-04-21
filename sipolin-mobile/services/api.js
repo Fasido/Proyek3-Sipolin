@@ -2,9 +2,9 @@
  * services/api.js — SIPOLIN API Service Layer
  * ─────────────────────────────────────────────
  * Centralised Axios instance with:
- *   • Auto token attachment
- *   • 401 cleanup
- *   • All domain API namespaces
+ * • Auto token attachment
+ * • 401 cleanup
+ * • All domain API namespaces
  */
 
 import axios from 'axios';
@@ -42,9 +42,9 @@ api.interceptors.response.use(
 
 // ─── Token Manager ────────────────────────────────────────────────────────────
 export const tokenManager = {
-  getToken:    ()      => AsyncStorage.getItem(TOKEN_KEY),
-  setToken:    (token) => AsyncStorage.setItem(TOKEN_KEY, token),
-  removeToken: ()      => AsyncStorage.removeItem(TOKEN_KEY),
+  getToken: () => AsyncStorage.getItem(TOKEN_KEY),
+  setToken: (token) => AsyncStorage.setItem(TOKEN_KEY, token),
+  removeToken: () => AsyncStorage.removeItem(TOKEN_KEY),
 };
 
 // ─── Auth API ─────────────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ export const authAPI = {
   register: (email, password, name, nim, phone, role = 'user', plateNumber = null, vehicleDetail = null) =>
     api.post('/auth/register', { email, password, name, nim, phone, role, plateNumber, vehicleDetail }),
   login:   (email, password) => api.post('/auth/login', { email, password }),
-  refresh: (token)           => api.post('/auth/refresh', { token }),
+  refresh: (token)          => api.post('/auth/refresh', { token }),
 };
 
 // ─── Users API ────────────────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ export const usersAPI = {
 
   /**
    * ★ Driver → push current GPS coordinates to the server.
-   *   Called every ~5 seconds from useDriverLocation hook.
+   * Called every ~5 seconds from useDriverLocation hook.
    *
    * @param {{ latitude: number, longitude: number }} coords
    * @returns {Promise<{ success: boolean, latitude: number, longitude: number, updatedAt: string }>}
@@ -85,7 +85,7 @@ export const usersAPI = {
 
   /**
    * ★ Customer → poll a driver's latest coordinates.
-   *   Called every POLL_INTERVAL ms from the tracking screen.
+   * Called every POLL_INTERVAL ms from the tracking screen.
    *
    * @param {string} driverUserId — the driver's user ID (from Order.driverId)
    * @returns {Promise<DriverLocationResponse>} see typedef below
