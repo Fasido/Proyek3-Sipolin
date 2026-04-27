@@ -89,19 +89,6 @@ export const usersAPI = {
    *
    * @param {string} driverUserId — the driver's user ID (from Order.driverId)
    * @returns {Promise<DriverLocationResponse>} see typedef below
-   *
-   * @typedef {Object} DriverLocationResponse
-   * @property {string}       driverId
-   * @property {string}       name
-   * @property {string|null}  phone
-   * @property {string|null}  vehicleDetail
-   * @property {string|null}  plateNumber
-   * @property {string|null}  profilePicture
-   * @property {boolean}      isVerified
-   * @property {number|null}  latitude
-   * @property {number|null}  longitude
-   * @property {string|null}  locationUpdatedAt  ISO-8601
-   * @property {boolean}      isOnline
    */
   getDriverLocation: (driverUserId) =>
     api.get(`/users/${driverUserId}/location`),
@@ -118,6 +105,10 @@ export const ordersAPI = {
   create:  (data)     => api.post('/orders', data),
   update:  (id, data) => api.put(`/orders/${id}`, data),
   delete:  (id)       => api.delete(`/orders/${id}`),
+  
+  // 👉 TAMBAHAN UNTUK FITUR HISTORI (INI YANG BIKIN ERROR HILANG):
+  getHistory: (params) => api.get('/orders/history', { params }),
+  getHistorySummary: () => api.get('/orders/history/summary'),
 };
 
 // ─── Notifications API ────────────────────────────────────────────────────────

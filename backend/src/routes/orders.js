@@ -1,9 +1,20 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
-import { verifyToken } from '../middleware/auth.js'; // <--- Gue balikin ke verifyToken
+import { verifyToken } from '../middleware/auth.js'; 
+import historyRouter from './orders.history.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+// 0. JEMBATAN HISTORI (Sudah dipasang Satpam & Penyelaras ID)
+router.use('/', verifyToken, (req, res, next) => {
+  // Claude pakai req.user.id, tapi sistem lama lo pakai req.userId. 
+  // Kita selaraskan otomatis di sini biar gak error!
+  if (req.userId && !req.user) {
+    req.user = { id: req.userId };
+  }
+  next();
+}, historyRouter);
 
 // 1. Buat Pesanan (TEBENGAN / JASTIP)
 router.post('/', verifyToken, async (req, res) => {
@@ -94,7 +105,7 @@ router.post('/:id/complete', verifyToken, async (req, res) => {
   }
 });
 
-// Ambil semua orderan milik user (History)
+// 5. Ambil semua orderan milik user (History Default)
 router.get('/', verifyToken, async (req, res) => {
   try {
     const orders = await prisma.order.findMany({

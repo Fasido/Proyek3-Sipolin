@@ -2,15 +2,14 @@ import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
-import { Home, ClipboardList, Bell, User } from 'lucide-react-native';
-// 1. Import ini untuk baca area aman layar HP
+// 1. Import Clock diganti untuk menu Histori
+import { Home, ClipboardList, Clock, User } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function AppLayout() {
   const { token, isLoading } = useAuth();
   const router = useRouter();
   
-  // 2. Ambil data insets (jarak aman atas, bawah, kiri, kanan)
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
@@ -36,7 +35,6 @@ export default function AppLayout() {
         tabBarActiveTintColor: '#2563eb',
         tabBarInactiveTintColor: '#9ca3af',
         tabBarStyle: { 
-          // 3. Gunakan insets.bottom supaya otomatis nambah tinggi kalau ada 'dagu' HP
           height: 60 + insets.bottom, 
           paddingBottom: insets.bottom > 0 ? insets.bottom : 10, 
           paddingTop: 10,
@@ -48,7 +46,7 @@ export default function AppLayout() {
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '500',
-          marginBottom: insets.bottom > 0 ? 0 : 5, // Atur margin teks kalau HP-nya gak ada poni bawah
+          marginBottom: insets.bottom > 0 ? 0 : 5, 
         }
       }}
     >
@@ -66,11 +64,12 @@ export default function AppLayout() {
           tabBarIcon: ({ color }) => <ClipboardList size={24} color={color} />,
         }}
       />
+      {/* 2. INI YANG DIBENERIN (notifications -> history) */}
       <Tabs.Screen
-        name="notifications"
+        name="history"
         options={{
-          title: 'Notif',
-          tabBarIcon: ({ color }) => <Bell size={24} color={color} />,
+          title: 'Histori',
+          tabBarIcon: ({ color }) => <Clock size={24} color={color} />,
         }}
       />
       <Tabs.Screen

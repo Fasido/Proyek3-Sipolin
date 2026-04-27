@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,7 +17,7 @@ export default function LoginScreen() {
     setLoading(true);
     const result = await signIn(email, password);
     if (result.success) {
-      router.replace('/(app)/dashboard');
+      router.replace('/(app)'); // Ganti ke /index atau /(app) menyesuaikan struktur folder utama lo
     } else {
       alert(result.error);
     }
@@ -26,147 +26,151 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.headerContainer}>
-        <View style={styles.iconWrapper}>
-           <Bike size={50} color="white" />
-        </View>
-        <Text style={styles.title}>SIPOLIN</Text>
-        <Text style={styles.subtitle}>Tebengan & Jastip Khusus Mahasiswa Polindra</Text>
-      </View>
-
-      <View style={styles.formContainer}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="nim@student.polindra.ac.id"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-          />
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
+      >
+        <View style={styles.headerContainer}>
+          <View style={styles.logoBadge}>
+            <Bike size={32} color="#ffffff" />
+          </View>
+          <Text style={styles.title}>Selamat Datang!</Text>
+          <Text style={styles.subtitle}>Masuk untuk mulai pesan Polride atau Jastip di Sipolin.</Text>
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Masukkan password"
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
+        <View style={styles.formContainer}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="nim@student.polindra.ac.id"
+              placeholderTextColor="#9CA3AF"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Masukkan password"
+              placeholderTextColor="#9CA3AF"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
+          </View>
+
+          <TouchableOpacity 
+            onPress={handleLogin}
+            disabled={loading}
+            style={styles.loginButton}
+          >
+            {loading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.loginButtonText}>Masuk</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            onPress={() => router.push('/register')}
+            style={styles.registerLink}
+          >
+            <Text style={styles.registerText}>Belum punya akun? <Text style={styles.registerTextBold}>Daftar dulu</Text></Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity 
-          onPress={handleLogin}
-          disabled={loading}
-          style={styles.loginButton}
-        >
-          {loading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.loginButtonText}>Masuk Ke Kampus</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          onPress={() => router.push('/register')}
-          style={styles.registerLink}
-        >
-          <Text style={styles.registerText}>Belum punya akun? <Text style={styles.registerTextBold}>Daftar Sekarang</Text></Text>
-        </TouchableOpacity>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 // ==========================================
-// STYLING MANUAL BIAR RAPI DI WEB & HP
+// STYLING ALA GOJEK (CLEAN & MODERN)
 // ==========================================
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 32,
+    backgroundColor: '#ffffff', // Background putih bersih
+  },
+  keyboardView: {
+    flex: 1,
     justifyContent: 'center',
+    paddingHorizontal: 24,
   },
   headerContainer: {
-    alignItems: 'center',
     marginBottom: 40,
+    alignItems: 'flex-start', // Rata kiri ala Gojek
   },
-  iconWrapper: {
-    backgroundColor: '#2563EB', // blue-600
-    padding: 16,
-    borderRadius: 24,
-    marginBottom: 16,
-    shadowColor: '#BFDBFE', // blue-200
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 15,
-    elevation: 5,
+  logoBadge: {
+    backgroundColor: '#00AA13', // Hijau Gojek (Atau ganti #2563EB buat Biru Sipolin)
+    padding: 12,
+    borderRadius: 16,
+    marginBottom: 24,
   },
   title: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: '#2563EB',
-    letterSpacing: -1,
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1C1C1C', // Hitam pekat
     marginBottom: 8,
   },
   subtitle: {
-    color: '#6B7280', // gray-500
-    fontWeight: '500',
-    textAlign: 'center',
+    fontSize: 15,
+    color: '#666666',
+    lineHeight: 22,
   },
   formContainer: {
     width: '100%',
-    maxWidth: 400, // Biar nggak terlalu lebar di Chrome laptop
-    alignSelf: 'center',
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   label: {
-    color: '#4B5563', // gray-600
+    fontSize: 14,
+    color: '#1C1C1C',
     fontWeight: '600',
     marginBottom: 8,
-    marginLeft: 4,
   },
   input: {
-    backgroundColor: '#F9FAFB', // gray-50
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#F3F4F6', // gray-100
-    color: '#111827', // gray-900
+    backgroundColor: '#F5F6F6', // Abu-abu sangat terang untuk input
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12, // Border membulat halus
     fontSize: 16,
+    color: '#1C1C1C',
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
   },
   loginButton: {
-    backgroundColor: '#2563EB',
-    padding: 20,
-    borderRadius: 16,
+    backgroundColor: '#00AA13', // Hijau Gojek (Bisa diganti #2563EB)
+    paddingVertical: 16,
+    borderRadius: 30, // Tombol sangat membulat (pill shape)
     alignItems: 'center',
-    marginTop: 24,
-    shadowColor: '#93C5FD', // blue-300
+    marginTop: 12,
+    shadowColor: '#00AA13',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
     elevation: 3,
   },
   loginButtonText: {
     color: '#ffffff',
     fontWeight: 'bold',
-    fontSize: 18,
+    fontSize: 16,
   },
   registerLink: {
     marginTop: 24,
     alignItems: 'center',
   },
   registerText: {
-    color: '#6B7280',
+    color: '#666666',
     fontSize: 14,
   },
   registerTextBold: {
-    color: '#2563EB',
+    color: '#00AA13', // Hijau Gojek (Bisa diganti #2563EB)
     fontWeight: 'bold',
   },
 });
