@@ -120,7 +120,6 @@ const ServiceCard = ({ icon: Icon, title, subtitle, color, bgColor, onPress, sty
           style,
         ]}
       >
-        {/* Icon pill */}
         <View
           style={{
             width: 52,
@@ -142,7 +141,6 @@ const ServiceCard = ({ icon: Icon, title, subtitle, color, bgColor, onPress, sty
           {subtitle}
         </Text>
 
-        {/* Arrow */}
         <View style={{ marginTop: 20, alignSelf: 'flex-start' }}>
           <ChevronRight size={16} color={color} strokeWidth={2.5} />
         </View>
@@ -158,7 +156,7 @@ const StatusBadge = ({ status }) => {
     pending:   { label: 'Menunggu', color: AMBER, bg: '#fffbeb' },
     accepted:  { label: 'Diproses', color: BLUE,  bg: BLUE_BG   },
     completed: { label: 'Selesai',  color: GREEN, bg: '#ecfdf5'  },
-    cancelled: { label: 'Dibatal',  color: RED,   bg: '#fef2f2'  },
+    cancelled: { label: 'Dibatalkan', color: RED,   bg: '#fef2f2'  },
   };
   const s = map[status] ?? map.pending;
   return (
@@ -173,7 +171,8 @@ const StatusBadge = ({ status }) => {
 // ─── Order Row (Customer) ─────────────────────────────────────────────────────
 
 const OrderRow = ({ order, onPress, isLast }) => {
-  const isRide = order.type === 'TEBENGAN';
+  // ✅ PERBAIKAN: type dari backend 'pol_ride' / 'pol_send'
+  const isRide = order.type === 'pol_ride';
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -186,7 +185,6 @@ const OrderRow = ({ order, onPress, isLast }) => {
         borderBottomColor: BORDER,
       }}
     >
-      {/* Type icon */}
       <View
         style={{
           width: 42,
@@ -203,7 +201,6 @@ const OrderRow = ({ order, onPress, isLast }) => {
           : <ShoppingBag size={20} color={GREEN} strokeWidth={2} />}
       </View>
 
-      {/* Info */}
       <View style={{ flex: 1 }}>
         <Text style={{ fontSize: 14, fontWeight: '700', color: INK, marginBottom: 3 }} numberOfLines={1}>
           {order.title}
@@ -246,7 +243,6 @@ const DriverOrderCard = ({ order, onAccept, onComplete, loading, isLast }) => {
         overflow: 'hidden',
       }}
     >
-      {/* Header stripe */}
       <View
         style={{
           backgroundColor: isAccepted ? BLUE_BG : '#f8fafc',
@@ -262,7 +258,7 @@ const DriverOrderCard = ({ order, onAccept, onComplete, loading, isLast }) => {
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: isAccepted ? BLUE : AMBER, marginRight: 8 }} />
           <Text style={{ fontSize: 11, fontWeight: '800', color: isAccepted ? BLUE : AMBER, letterSpacing: 0.8 }}>
-            {order.type?.toUpperCase() ?? 'ORDER'}
+            {order.type === 'pol_ride' ? 'POL-RIDE' : 'POL-SEND'}
           </Text>
         </View>
         <Text style={{ fontSize: 15, fontWeight: '900', color: INK }}>
@@ -271,12 +267,10 @@ const DriverOrderCard = ({ order, onAccept, onComplete, loading, isLast }) => {
       </View>
 
       <View style={{ padding: 16 }}>
-        {/* Title */}
         <Text style={{ fontSize: 15, fontWeight: '800', color: INK, marginBottom: 14 }} numberOfLines={1}>
           {order.title}
         </Text>
 
-        {/* Route */}
         <View style={{ flexDirection: 'row', marginBottom: 18 }}>
           <View style={{ alignItems: 'center', marginRight: 14 }}>
             <Circle size={10} color={BLUE} fill={BLUE} strokeWidth={0} />
@@ -293,7 +287,6 @@ const DriverOrderCard = ({ order, onAccept, onComplete, loading, isLast }) => {
           </View>
         </View>
 
-        {/* Action Button */}
         <TouchableOpacity
           onPress={() => isAccepted ? onComplete(order.id) : onAccept(order.id)}
           disabled={!!loading}
@@ -429,9 +422,7 @@ const CustomerDashboard = ({ user, stats, orders, refreshing, onRefresh, router 
       }
       contentContainerStyle={{ paddingBottom: 40 }}
     >
-      {/* ── Header ── */}
       <View style={{ backgroundColor: WHITE, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 28 }}>
-        {/* Top bar */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <View style={{ flex: 1, paddingRight: 16 }}>
             <Text style={{ fontSize: 13, color: MUTED, fontWeight: '600', marginBottom: 4 }}>
@@ -443,7 +434,6 @@ const CustomerDashboard = ({ user, stats, orders, refreshing, onRefresh, router 
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            {/* Notif bell */}
             <TouchableOpacity
               onPress={() => router.push('/(app)/notifications')}
               activeOpacity={0.7}
@@ -462,13 +452,10 @@ const CustomerDashboard = ({ user, stats, orders, refreshing, onRefresh, router 
                 }} />
               )}
             </TouchableOpacity>
-
-            {/* Avatar */}
             <Avatar name={user?.name} size={44} />
           </View>
         </View>
 
-        {/* Stats strip */}
         <View style={{
           flexDirection: 'row', marginTop: 24,
           backgroundColor: '#f8fafc', borderRadius: 16,
@@ -483,10 +470,8 @@ const CustomerDashboard = ({ user, stats, orders, refreshing, onRefresh, router 
         </View>
       </View>
 
-      {/* Thin rule */}
       <View style={{ height: 1, backgroundColor: BORDER }} />
 
-      {/* ── Service Cards ── */}
       <View style={{ paddingHorizontal: 24, paddingTop: 28, paddingBottom: 4 }}>
         <Text style={{ fontSize: 12, fontWeight: '800', color: MUTED, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 16 }}>
           Layanan
@@ -499,7 +484,7 @@ const CustomerDashboard = ({ user, stats, orders, refreshing, onRefresh, router 
             subtitle={'Tebengan kampus\ncepat & terjangkau'}
             color={BLUE}
             bgColor={BLUE_BG}
-            onPress={() => router.push('/(app)/orders/create?type=TEBENGAN')}
+            onPress={() => router.push('/orders/create')}
             style={{ marginRight: 0 }}
           />
           <ServiceCard
@@ -508,12 +493,11 @@ const CustomerDashboard = ({ user, stats, orders, refreshing, onRefresh, router 
             subtitle={'Kirim & pesan\nbarang/makanan'}
             color={GREEN}
             bgColor={'#f0fdf4'}
-            onPress={() => router.push('/(app)/orders/create?type=JASTIP')}
+            onPress={() => router.push('/orders/create')}
           />
         </View>
       </View>
 
-      {/* ── Order History ── */}
       <View style={{ paddingHorizontal: 24, paddingTop: 32 }}>
         <SectionHeader
           title="Pesanan Terbaru"
@@ -545,7 +529,7 @@ const CustomerDashboard = ({ user, stats, orders, refreshing, onRefresh, router 
                 key={order.id}
                 order={order}
                 isLast={i === orders.length - 1}
-                onPress={() => router.push(`/(app)/orders/${order.id}`)}
+                onPress={() => router.push(`/orders/${order.id}`)}
               />
             ))
           )}
@@ -573,7 +557,6 @@ const DriverDashboard = ({
       }
       contentContainerStyle={{ paddingBottom: 40 }}
     >
-      {/* ── Driver Header ── */}
       <View style={{ backgroundColor: WHITE, paddingHorizontal: 24, paddingTop: 20, paddingBottom: 28 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <View style={{ flex: 1, paddingRight: 16 }}>
@@ -601,7 +584,6 @@ const DriverDashboard = ({
           </View>
         </View>
 
-        {/* Driver stats */}
         <View style={{
           flexDirection: 'row', marginTop: 24,
           backgroundColor: '#f8fafc', borderRadius: 16,
@@ -618,7 +600,6 @@ const DriverDashboard = ({
 
       <View style={{ height: 1, backgroundColor: BORDER }} />
 
-      {/* ── Available Orders ── */}
       <View style={{ paddingHorizontal: 24, paddingTop: 28 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
           <SectionHeader title="Order Tersedia" />
@@ -687,20 +668,34 @@ export default function DashboardScreen() {
     }
     try {
       const isDriver = user.role === 'driver';
+      
       const [statsRes, ordersRes] = await Promise.all([
-        isDriver ? usersAPI.getDriverStats() : usersAPI.getStats(),
-        isDriver
-          ? ordersAPI.getAvailableOrders()
-          : ordersAPI.getAll({ limit: 5 }),        // ← fixed: was ordersAPI.list()
+        usersAPI.getStats(),
+        isDriver ? ordersAPI.getAvailableOrders() : ordersAPI.list(),
       ]);
-      setStats(statsRes.data);
-      if (isDriver) {
-        setAvailableOrders(ordersRes.data ?? []);
+      
+      // Set stats
+      if (statsRes && statsRes.success) {
+        setStats(statsRes.data);
+      } else if (statsRes) {
+        setStats(statsRes);
       } else {
-        setUserOrders(ordersRes.data ?? []);
+        setStats({ totalOrders: 0, ordersByStatus: { accepted: 0, completed: 0 } });
+      }
+      
+      // Set orders
+      if (isDriver) {
+        const availableData = (ordersRes && ordersRes.success) ? ordersRes.data : ordersRes;
+        setAvailableOrders(Array.isArray(availableData) ? availableData : []);
+      } else {
+        const ordersData = (ordersRes && ordersRes.success) ? ordersRes.data : ordersRes;
+        setUserOrders(Array.isArray(ordersData) ? ordersData.slice(0, 5) : []);
       }
     } catch (err) {
       console.error('[Dashboard] fetchData error:', err);
+      setStats({ totalOrders: 0, ordersByStatus: { accepted: 0, completed: 0 } });
+      setUserOrders([]);
+      setAvailableOrders([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -718,16 +713,26 @@ export default function DashboardScreen() {
 
   const handleAccept = async (orderId) => {
     setActionLoading((p) => ({ ...p, [orderId]: 'accepting' }));
-    try { await ordersAPI.acceptOrder(orderId); await fetchData(); }
-    catch (e) { console.error('[Dashboard] accept failed:', e); }
-    finally { setActionLoading((p) => ({ ...p, [orderId]: null })); }
+    try { 
+      await ordersAPI.acceptOrder(orderId); 
+      await fetchData(); 
+    } catch (e) { 
+      console.error('[Dashboard] accept failed:', e); 
+    } finally { 
+      setActionLoading((p) => ({ ...p, [orderId]: null })); 
+    }
   };
 
   const handleComplete = async (orderId) => {
     setActionLoading((p) => ({ ...p, [orderId]: 'completing' }));
-    try { await ordersAPI.completeOrder(orderId); await fetchData(); }
-    catch (e) { console.error('[Dashboard] complete failed:', e); }
-    finally { setActionLoading((p) => ({ ...p, [orderId]: null })); }
+    try { 
+      await ordersAPI.completeOrder(orderId); 
+      await fetchData(); 
+    } catch (e) { 
+      console.error('[Dashboard] complete failed:', e); 
+    } finally { 
+      setActionLoading((p) => ({ ...p, [orderId]: null })); 
+    }
   };
 
   // ── Guards ───────────────────────────────────────────────────────────────────
