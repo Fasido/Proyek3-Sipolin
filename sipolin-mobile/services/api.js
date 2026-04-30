@@ -1,53 +1,50 @@
 /**
  * services/api.js — SIPOLIN API Service Layer
- * ─────────────────────────────────────────────
- * Centralised Axios instance with:
- * • Auto token attachment
- * • 401 cleanup
- * • All domain API namespaces
  */
 
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// ─── Config ───────────────────────────────────────────────────────────────────
+// ─── Config ─────────────────────────────────────────────────────────────
 const BASE_URL = "http://10.0.173.163:3000/api";
 const TOKEN_KEY = "@sipolin_token";
 
-// ─── Axios Instance ───────────────────────────────────────────────────────────
+// ─── Axios Instance ─────────────────────────────────────────────────────
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 15_000,
+  timeout: 15000,
   headers: { "Content-Type": "application/json" },
 });
 
-// ─── Request Interceptor: attach Bearer token ─────────────────────────────────
+// ─── Request Interceptor ────────────────────────────────────────────────
 api.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem(TOKEN_KEY);
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   },
-  (err) => Promise.reject(err),
+  (err) => Promise.reject(err)
 );
 
-// ─── Response Interceptor: clear token on 401 ────────────────────────────────
+// ─── Response Interceptor ───────────────────────────────────────────────
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
-    if (err.response?.status === 401) await AsyncStorage.removeItem(TOKEN_KEY);
+    if (err.response?.status === 401) {
+      await AsyncStorage.removeItem(TOKEN_KEY);
+    }
     return Promise.reject(err);
-  },
+  }
 );
 
-// ─── Token Manager ────────────────────────────────────────────────────────────
+// ─── Token Manager ──────────────────────────────────────────────────────
 export const tokenManager = {
   getToken: () => AsyncStorage.getItem(TOKEN_KEY),
   setToken: (token) => AsyncStorage.setItem(TOKEN_KEY, token),
   removeToken: () => AsyncStorage.removeItem(TOKEN_KEY),
 };
 
-// ─── Auth API ─────────────────────────────────────────────────────────────────
+// ─── Auth API ───────────────────────────────────────────────────────────
 export const authAPI = {
   register: (
     email,
@@ -57,7 +54,7 @@ export const authAPI = {
     phone,
     role = "user",
     plateNumber = null,
-    vehicleDetail = null,
+    vehicleDetail = null
   ) =>
     api.post("/auth/register", {
       email,
@@ -69,72 +66,61 @@ export const authAPI = {
       plateNumber,
       vehicleDetail,
     }),
-  login: (email, password) => api.post("/auth/login", { email, password }),
-  refresh: (token) => api.post("/auth/refresh", { token }),
+
+  login: (email, password) =>
+    api.post("/auth/login", { email, password }),
+
+  refresh: (token) =>
+    api.post("/auth/refresh", { token }),
 };
 
-// ─── Users API ────────────────────────────────────────────────────────────────
+// ─── Users API ──────────────────────────────────────────────────────────
 export const usersAPI = {
-  /** Fetch the authenticated user's own profile */
   getProfile: () => api.get("/users/profile"),
 
-  /** Update name, phone, nim */
-  updateProfile: (data) => api.put("/users/profile", data),
+  updateProfile: (data) =>
+    api.put("/users/profile", data),
 
-  /** Upload profile picture (base64 data URI or HTTPS URL) */
   updateProfilePicture: (imageData) =>
     api.put("/users/profile-picture", { profilePicture: imageData }),
 
-  /** Remove profile picture */
-  removeProfilePicture: () => api.delete("/users/profile-picture"),
+  removeProfilePicture: () =>
+    api.delete("/users/profile-picture"),
 
-  /**
-   * ★ Driver → push current GPS coordinates to the server.
-   * Called every ~5 seconds from useDriverLocation hook.
-   *
-   * @param {{ latitude: number, longitude: number }} coords
-   * @returns {Promise<{ success: boolean, latitude: number, longitude: number, updatedAt: string }>}
-   */
   updateLocation: ({ latitude, longitude }) =>
     api.put("/users/location", { latitude, longitude }),
 
-  /**
-   * ★ Customer → poll a driver's latest coordinates.
-   * Called every POLL_INTERVAL ms from the tracking screen.
-   *
-   * @param {string} driverUserId — the driver's user ID (from Order.driverId)
-   * @returns {Promise<DriverLocationResponse>} see typedef below
-   *
-   * @typedef {Object} DriverLocationResponse
-   * @property {string}       driverId
-   * @property {string}       name
-   * @property {string|null}  phone
-   * @property {string|null}  vehicleDetail
-   * @property {string|null}  plateNumber
-   * @property {string|null}  profilePicture
-   * @property {boolean}      isVerified
-   * @property {number|null}  latitude
-   * @property {number|null}  longitude
-   * @property {string|null}  locationUpdatedAt  ISO-8601
-   * @property {boolean}      isOnline
-   */
   getDriverLocation: (driverUserId) =>
     api.get(`/users/${driverUserId}/location`),
 
-  /** Aggregated stats (orders, notifications) */
-  getStats: () => api.get("/users/stats"),
+  getStats: () =>
+    api.get("/users/stats"),
 };
 
-// ─── Orders API ───────────────────────────────────────────────────────────────
+// ─── Orders API ─────────────────────────────────────────────────────────
 export const ordersAPI = {
+  // BASIC CRUD
   getAll: (params) => api.get("/orders", { params }),
   getById: (id) => api.get(`/orders/${id}`),
   create: (data) => api.post("/orders", data),
   update: (id, data) => api.put(`/orders/${id}`, data),
   delete: (id) => api.delete(`/orders/${id}`),
+
+  // CREATE KHUSUS
+  createRide: (data) => api.post("/orders/pol_ride", data),
+  createSend: (data) => api.post("/orders/pol_send", data),
+
+  // DRIVER
+  getAvailable: () => api.get("/orders/available"),
+  acceptOrder: (id) => api.post(`/orders/${id}/accept`),
+  completeOrder: (id) => api.post(`/orders/${id}/complete`),
+
+  // ✅ HISTORI (INI YANG PENTING)
+  getHistory: (params) => api.get("/orders/history", { params }),
+  getHistorySummary: () => api.get("/orders/history/summary"),
 };
 
-// ─── Notifications API ────────────────────────────────────────────────────────
+// ─── Notifications API ──────────────────────────────────────────────────
 export const notificationsAPI = {
   getAll: () => api.get("/notifications"),
   markRead: (id) => api.put(`/notifications/${id}/read`),

@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { Tabs, useRouter } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
-import { Home, ClipboardList, Bell, User } from "lucide-react-native";
+import { Home, ClipboardList, Clock, User } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function AppLayout() {
@@ -11,13 +11,11 @@ export default function AppLayout() {
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    // Redirect ke login kalau loading selesai tapi token nggak ada
     if (!isLoading && !token) {
       router.replace("/login");
     }
   }, [token, isLoading]);
 
-  // Loading state
   if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -26,7 +24,6 @@ export default function AppLayout() {
     );
   }
 
-  // Jika belum ada token, jangan render apa-apa dulu (biar useEffect yang handle redirect)
   if (!token) return null;
 
   return (
@@ -58,6 +55,7 @@ export default function AppLayout() {
           tabBarIcon: ({ color }) => <Home size={24} color={color} />,
         }}
       />
+
       <Tabs.Screen
         name="orders"
         options={{
@@ -65,13 +63,16 @@ export default function AppLayout() {
           tabBarIcon: ({ color }) => <ClipboardList size={24} color={color} />,
         }}
       />
+
+      {/* ✅ HISTORI */}
       <Tabs.Screen
-        name="notifications"
+        name="history"
         options={{
-          title: "Notif",
-          tabBarIcon: ({ color }) => <Bell size={24} color={color} />,
+          title: "Histori",
+          tabBarIcon: ({ color }) => <Clock size={24} color={color} />,
         }}
       />
+
       <Tabs.Screen
         name="profile"
         options={{

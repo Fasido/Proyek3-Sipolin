@@ -1,19 +1,41 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { verifyToken } from '../middleware/auth.js';
+import historyRouter from './orders.history.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
+/**
+ * 🔧 BRIDGE: Samakan req.userId & req.user.id
+ */
+router.use(verifyToken, (req, res, next) => {
+  if (req.userId && !req.user) {
+    req.user = { id: req.userId };
+  }
+  next();
+});
+
+/**
+ * 📊 HISTORY ROUTES
+ * Endpoint:
+ * /orders/history
+ * /orders/history/summary
+ */
+router.use('/', historyRouter);
+
 // ==================== ORDER UMUM ====================
-// Ambil semua pesanan user (History)
-router.get('/', verifyToken, async (req, res) => {
+
+// GET semua order milik user (active + history ringan)
+router.get('/', async (req, res) => {
   try {
+    const userId = req.userId;
+
     const orders = await prisma.order.findMany({
       where: {
         OR: [
-          { customerId: req.userId },
-          { driverId: req.userId }
+          { customerId: userId },
+          { driverId: userId }
         ]
       },
       include: {
@@ -22,22 +44,26 @@ router.get('/', verifyToken, async (req, res) => {
       },
       orderBy: { createdAt: 'desc' },
     });
+
     res.json({ success: true, data: orders });
   } catch (error) {
-    res.status(500).json({ error: 'Gagal mengambil riwayat' });
+    console.error('[GET ORDERS]', error);
+    res.status(500).json({ error: 'Gagal mengambil pesanan' });
   }
 });
 
-// Ambil detail pesanan by ID
-router.get('/:id', verifyToken, async (req, res) => {
+// ==================== DETAIL ====================
+router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.userId;
+
     const order = await prisma.order.findFirst({
       where: {
-        id: id,
+        id,
         OR: [
-          { customerId: req.userId },
-          { driverId: req.userId }
+          { customerId: userId },
+          { driverId: userId }
         ]
       },
       include: {
@@ -52,137 +78,125 @@ router.get('/:id', verifyToken, async (req, res) => {
 
     res.json({ success: true, data: order });
   } catch (error) {
-    res.status(500).json({ error: 'Gagal mengambil detail pesanan' });
+    console.error('[GET DETAIL]', error);
+    res.status(500).json({ error: 'Gagal mengambil detail' });
   }
 });
 
-// Ambil pesanan berdasarkan tipe (pol_ride / pol_send)
-router.get('/type/:type', verifyToken, async (req, res) => {
+// ==================== FILTER TYPE ====================
+router.get('/type/:type', async (req, res) => {
   try {
     const { type } = req.params;
-    
+    const userId = req.userId;
+
     if (!['pol_ride', 'pol_send'].includes(type)) {
-      return res.status(400).json({ error: 'Tipe pesanan harus pol_ride atau pol_send' });
+      return res.status(400).json({ error: 'Tipe tidak valid' });
     }
 
     const orders = await prisma.order.findMany({
       where: {
-        type: type,
+        type,
         OR: [
-          { customerId: req.userId },
-          { driverId: req.userId }
+          { customerId: userId },
+          { driverId: userId }
         ]
-      },
-      include: {
-        customer: { select: { name: true, phone: true, nim: true } },
-        driver: { select: { name: true, phone: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
-    
+
     res.json({ success: true, data: orders });
   } catch (error) {
-    res.status(500).json({ error: 'Gagal mengambil pesanan' });
+    console.error('[FILTER TYPE]', error);
+    res.status(500).json({ error: 'Gagal mengambil data' });
   }
 });
 
-// ==================== POL_RIDE (Antar Jemput) ====================
-router.post('/pol_ride', verifyToken, async (req, res) => {
+// ==================== CREATE POL_RIDE ====================
+router.post('/pol_ride', async (req, res) => {
   try {
-    const { pickupLocation, dropoffLocation, scheduledTime, note } = req.body;
+    const { pickupLocation, dropoffLocation, note } = req.body;
     const userId = req.userId;
 
     if (!pickupLocation || !dropoffLocation) {
-      return res.status(400).json({ error: 'Lokasi jemput dan tujuan wajib diisi' });
+      return res.status(400).json({ error: 'Lokasi wajib diisi' });
     }
 
-    const estimatedDistance = 3; // TODO: Google Maps API
-    const price = estimatedDistance * 5000;
+    const price = 3 * 5000;
 
     const order = await prisma.order.create({
       data: {
         type: 'pol_ride',
-        title: 'Pol_Ride (Antar Jemput)',
+        title: 'Pol_Ride',
         description: note || '',
         pickup: pickupLocation,
         destination: dropoffLocation,
-        price: price,
+        price,
         customerId: userId,
         status: 'pending',
       },
     });
 
-    res.status(201).json({ 
-      success: true, 
-      data: order,
-      message: `Pesanan Pol_Ride berhasil dibuat. Harga: Rp ${price.toLocaleString()}`
-    });
+    res.status(201).json({ success: true, data: order });
   } catch (error) {
-    console.error('[Pol_Ride] Error:', error);
-    res.status(500).json({ error: 'Gagal membuat pesanan Pol_Ride' });
+    console.error('[POL_RIDE]', error);
+    res.status(500).json({ error: 'Gagal membuat order' });
   }
 });
 
-// ==================== POL_SEND (Jastip Makanan) ====================
-router.post('/pol_send', verifyToken, async (req, res) => {
+// ==================== CREATE POL_SEND ====================
+router.post('/pol_send', async (req, res) => {
   try {
-    const { foodName, restaurantName, foodPrice, photoUrl, note } = req.body;
+    const { foodName, restaurantName, foodPrice, note } = req.body;
     const userId = req.userId;
 
     if (!foodName || !restaurantName) {
-      return res.status(400).json({ error: 'Nama makanan dan restoran wajib diisi' });
+      return res.status(400).json({ error: 'Data tidak lengkap' });
     }
 
-    const hargaMakanan = foodPrice || 20000;
-    const jastipFee = 5000 + (hargaMakanan * 0.1);
-    const totalPrice = hargaMakanan + jastipFee;
+    const harga = foodPrice || 20000;
+    const fee = 5000 + harga * 0.1;
+    const total = harga + fee;
 
     const order = await prisma.order.create({
       data: {
         type: 'pol_send',
         title: `Jastip: ${foodName}`,
-        description: `Restoran: ${restaurantName}\nCatatan: ${note || '-'}`,
+        description: note || '',
         pickup: restaurantName,
         destination: foodName,
-        price: totalPrice,
+        price: total,
         customerId: userId,
         status: 'pending',
       },
     });
 
-    res.status(201).json({ 
-      success: true, 
-      data: order,
-      message: `Pesanan Pol_Send berhasil dibuat. Total: Rp ${totalPrice.toLocaleString()}`
-    });
+    res.status(201).json({ success: true, data: order });
   } catch (error) {
-    console.error('[Pol_Send] Error:', error);
-    res.status(500).json({ error: 'Gagal membuat pesanan Pol_Send' });
+    console.error('[POL_SEND]', error);
+    res.status(500).json({ error: 'Gagal membuat order' });
   }
 });
 
-// ==================== DRIVER FEATURES ====================
-// Ambil orderan yang tersedia (pending & belum ada driver)
-router.get('/available', verifyToken, async (req, res) => {
+// ==================== DRIVER ====================
+
+// GET available
+router.get('/available', async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
-      where: {
-        status: 'pending',
-        driverId: null,
-      },
+      where: { status: 'pending', driverId: null },
       include: {
-        customer: { select: { name: true, phone: true, nim: true } },
+        customer: { select: { name: true, phone: true } },
       },
-      orderBy: { createdAt: 'desc' },
     });
+
     res.json({ success: true, data: orders });
   } catch (error) {
-    res.status(500).json({ error: 'Gagal mengambil orderan tersedia' });
+    res.status(500).json({ error: 'Gagal mengambil data' });
   }
 });
 
-// Driver ambil orderan
-router.post('/:id/accept', verifyToken, async (req, res) => {
+// ACCEPT
+router.post('/:id/accept', async (req, res) => {
   try {
     const { id } = req.params;
     const driverId = req.userId;
@@ -192,28 +206,22 @@ router.post('/:id/accept', verifyToken, async (req, res) => {
     });
 
     if (!order) {
-      return res.status(400).json({ error: 'Pesanan sudah diambil atau tidak tersedia' });
+      return res.status(400).json({ error: 'Order tidak tersedia' });
     }
 
     const updated = await prisma.order.update({
       where: { id },
-      data: {
-        driverId,
-        status: 'accepted',
-      },
-      include: {
-        customer: { select: { name: true, phone: true } },
-      },
+      data: { driverId, status: 'accepted' },
     });
 
-    res.json({ success: true, data: updated, message: 'Berhasil mengambil pesanan' });
+    res.json({ success: true, data: updated });
   } catch (error) {
-    res.status(500).json({ error: 'Gagal mengambil pesanan ini' });
+    res.status(500).json({ error: 'Gagal accept' });
   }
 });
 
-// Driver selesaikan orderan
-router.post('/:id/complete', verifyToken, async (req, res) => {
+// COMPLETE
+router.post('/:id/complete', async (req, res) => {
   try {
     const { id } = req.params;
     const driverId = req.userId;
@@ -223,7 +231,7 @@ router.post('/:id/complete', verifyToken, async (req, res) => {
     });
 
     if (!order) {
-      return res.status(400).json({ error: 'Pesanan tidak ditemukan atau bukan pesanan Anda' });
+      return res.status(400).json({ error: 'Order tidak valid' });
     }
 
     const updated = await prisma.order.update({
@@ -233,36 +241,36 @@ router.post('/:id/complete', verifyToken, async (req, res) => {
         completedAt: new Date(),
       },
     });
-    
-    res.json({ success: true, data: updated, message: 'Pesanan selesai' });
+
+    res.json({ success: true, data: updated });
   } catch (error) {
-    res.status(500).json({ error: 'Gagal menyelesaikan pesanan' });
+    res.status(500).json({ error: 'Gagal complete' });
   }
 });
 
-// Batalkan orderan (hanya customer yang bisa batalkan sebelum diambil driver)
-router.delete('/:id/cancel', verifyToken, async (req, res) => {
+// ==================== CANCEL ====================
+router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.userId;
 
     const order = await prisma.order.findFirst({
-      where: { 
-        id, 
+      where: {
+        id,
         customerId: userId,
-        status: { in: ['pending'] }
+        status: 'pending',
       }
     });
 
     if (!order) {
-      return res.status(400).json({ error: 'Pesanan tidak dapat dibatalkan' });
+      return res.status(400).json({ error: 'Tidak bisa dibatalkan' });
     }
 
     await prisma.order.delete({ where: { id } });
-    
-    res.json({ success: true, message: 'Pesanan berhasil dibatalkan' });
+
+    res.json({ success: true, message: 'Pesanan dibatalkan' });
   } catch (error) {
-    res.status(500).json({ error: 'Gagal membatalkan pesanan' });
+    res.status(500).json({ error: 'Gagal cancel' });
   }
 });
 
