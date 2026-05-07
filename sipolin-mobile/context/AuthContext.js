@@ -12,19 +12,27 @@ export const AuthProvider = ({ children }) => {
   // ── Bootstrap: cek token & load profil saat app dibuka ──────────────────────
   useEffect(() => {
     const bootstrap = async () => {
+      console.log("=== 1. MULAI CEK AKUN ===");
       try {
+        console.log("=== 2. NYOBA BACA TOKEN DARI HP ===");
         const savedToken = await tokenManager.getToken();
+        console.log("=== 3. HASIL TOKEN: ===", savedToken);
+        
         if (savedToken) {
-          setToken(savedToken);
+          console.log("=== 4. TOKEN ADA, NYOBA NEMBAK API GET PROFILE ===");
           const response = await usersAPI.getProfile();
+          console.log("=== 5. BERHASIL DAPET PROFIL! ===");
           setUser(response.data);
+        } else {
+          console.log("=== 4. TOKEN KOSONG (USER BARU) ===");
         }
       } catch (e) {
-        console.error('[Auth] Bootstrap error:', e);
+        console.log("=== ERROR TERJADI! ===", e.message);
         await tokenManager.removeToken();
         setToken(null);
         setUser(null);
       } finally {
+        console.log("=== 6. MATIIN LOADING SCREEN ===");
         setIsLoading(false);
       }
     };

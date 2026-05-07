@@ -8,6 +8,13 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// 👑 ENUM ROLE — Biar manajemen user lo nggak typo
+enum Role {
+  USER
+  DRIVER
+  ADMIN
+}
+
 model User {
   id             String    @id @default(cuid())
   email          String    @unique
@@ -15,7 +22,7 @@ model User {
   name           String
   nim            String    @unique
   phone          String?
-  role           String    @default("user")
+  role           Role      @default(USER) // ✅ Sekarang pake Enum
   ktmImage       String?
   isVerified     Boolean   @default(false)
   vehicleInfo    String?
@@ -24,31 +31,34 @@ model User {
   avatar         String?
   profilePicture String?
 
-  // ── Real-Time Location (written by driver, read by customer) ──────────────
-  latitude          Float?    // WGS-84 decimal degrees
-  longitude         Float?    // WGS-84 decimal degrees
-  locationUpdatedAt DateTime? // Staleness guard — diff > 30s → driver offline
+  // ── Real-Time Location ─────────────
+  latitude          Float?
+  longitude         Float?
+  locationUpdatedAt DateTime?
 
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
-  orders        Order[]        @relation("customer")
-  tripsAsDriver Order[]        @relation("driver")
-  notifications Notification[]
+  // ── Relations ──────────────────────
+  orders             Order[]        @relation("customer")
+  tripsAsDriver      Order[]        @relation("driver")
+  notifications      Notification[]
+  chatRoomsAsCustomer ChatRoom[]     @relation("chatCustomer")
+  chatRoomsAsDriver   ChatRoom[]     @relation("chatDriver")
+  sentMessages       Message[]      @relation("messageSender")
+  broadcasts         Broadcast[]    // ✅ Link ke history broadcast admin
 
   @@map("users")
 }
 
 model Order {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   type        String
   title       String
   description String?
-  price       Float   @default(0)
-  status      String  @default("pending")
-
+  price       Float    @default(0)
+  status      String   @default("pending")
   pickup      String
   destination String
 
@@ -61,6 +71,8 @@ model Order {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   completedAt DateTime?
+
+  chatRoom ChatRoom?
 
   @@map("orders")
 }
@@ -77,4 +89,53 @@ model Notification {
   createdAt      DateTime @default(now())
 
   @@map("notifications")
+}
+
+// 📢 BROADCAST — Singasana buat kirim pengumuman massal
+model Broadcast {
+  id        String   @id @default(cuid())
+  title     String
+  message   String   @db.Text
+  target    String   @default("all") // all, user, driver
+  adminId   String
+  admin     User     @relation(fields: [adminId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@map("broadcasts")
+}
+
+// 💬 CHAT MODELS
+model ChatRoom {
+  id           String   @id @default(cuid())
+  orderId      String   @unique
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  customerId   String
+  customer     User     @relation("chatCustomer", fields: [customerId], references: [id], onDelete: Cascade)
+  driverId     String
+  driver       User     @relation("chatDriver", fields: [driverId], references: [id], onDelete: Cascade)
+  lastMessage  String?
+  lastMessageAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  messages     Message[]
+
+  @@index([customerId])
+  @@index([driverId])
+  @@index([lastMessageAt(sort: Desc)])
+  @@map("chat_rooms")
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  chatRoomId String
+  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  senderId   String
+  sender     User     @relation("messageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  text       String   @db.Text
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([chatRoomId, createdAt(sort: Asc)])
+  @@index([chatRoomId, senderId, isRead])
+  @@map("messages")
 }
