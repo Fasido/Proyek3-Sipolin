@@ -18,15 +18,10 @@ router.use(verifyToken, (req, res, next) => {
 
 /**
  * 📊 HISTORY ROUTES
- * Endpoint:
- * /orders/history
- * /orders/history/summary
  */
 router.use('/', historyRouter);
 
-// ==================== ORDER UMUM ====================
-
-// GET semua order milik user (active + history ringan)
+// GET semua order milik user
 router.get('/', async (req, res) => {
   try {
     const userId = req.userId;
@@ -52,7 +47,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ==================== DETAIL ====================
+// GET detail order
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -83,7 +78,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ==================== FILTER TYPE ====================
+// GET filter by type
 router.get('/type/:type', async (req, res) => {
   try {
     const { type } = req.params;
@@ -95,7 +90,7 @@ router.get('/type/:type', async (req, res) => {
 
     const orders = await prisma.order.findMany({
       where: {
-        type,
+        type: type,
         OR: [
           { customerId: userId },
           { driverId: userId }
@@ -111,7 +106,7 @@ router.get('/type/:type', async (req, res) => {
   }
 });
 
-// ==================== CREATE POL_RIDE ====================
+// CREATE POL_RIDE
 router.post('/pol_ride', async (req, res) => {
   try {
     const { pickupLocation, dropoffLocation, note } = req.body;
@@ -121,7 +116,7 @@ router.post('/pol_ride', async (req, res) => {
       return res.status(400).json({ error: 'Lokasi wajib diisi' });
     }
 
-    const price = 3 * 5000;
+    const price = 3 * 5000; // Rp 15.000
 
     const order = await prisma.order.create({
       data: {
@@ -130,7 +125,7 @@ router.post('/pol_ride', async (req, res) => {
         description: note || '',
         pickup: pickupLocation,
         destination: dropoffLocation,
-        price,
+        price: price,
         customerId: userId,
         status: 'pending',
       },
@@ -143,7 +138,7 @@ router.post('/pol_ride', async (req, res) => {
   }
 });
 
-// ==================== CREATE POL_SEND ====================
+// CREATE POL_SEND
 router.post('/pol_send', async (req, res) => {
   try {
     const { foodName, restaurantName, foodPrice, note } = req.body;
@@ -177,9 +172,7 @@ router.post('/pol_send', async (req, res) => {
   }
 });
 
-// ==================== DRIVER ====================
-
-// GET available
+// GET available orders for drivers
 router.get('/available', async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
@@ -195,7 +188,7 @@ router.get('/available', async (req, res) => {
   }
 });
 
-// ACCEPT
+// ACCEPT order (driver)
 router.post('/:id/accept', async (req, res) => {
   try {
     const { id } = req.params;
@@ -220,7 +213,7 @@ router.post('/:id/accept', async (req, res) => {
   }
 });
 
-// COMPLETE
+// COMPLETE order (driver)
 router.post('/:id/complete', async (req, res) => {
   try {
     const { id } = req.params;
@@ -248,7 +241,7 @@ router.post('/:id/complete', async (req, res) => {
   }
 });
 
-// ==================== CANCEL ====================
+// CANCEL order
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;

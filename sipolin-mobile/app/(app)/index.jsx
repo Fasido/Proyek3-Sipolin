@@ -36,6 +36,8 @@ import {
   Star,
   TrendingUp,
   Zap,
+  Car,
+  Package,
 } from 'lucide-react-native';
 
 const { width: SW } = Dimensions.get('window');
@@ -95,7 +97,7 @@ const PROMO_BANNERS = [
     badgeColor: '#FFD700',
     gradient: ['#00C46A', '#007A3E'],
     image: (() => { try { return require('../../assets/images/banner-ride.jpg'); } catch { return null; } })(),
-    route: '/pol-ride',
+    route: '/pol_ride',
     cta: 'Pesan Sekarang',
   },
   {
@@ -106,7 +108,7 @@ const PROMO_BANNERS = [
     badgeColor: '#FF6B35',
     gradient: ['#1A73E8', '#0D47A1'],
     image: (() => { try { return require('../../assets/images/banner-send.jpg'); } catch { return null; } })(),
-    route: '/pol-send',
+    route: '/pol_send',
     cta: 'Kirim Sekarang',
   },
   {
@@ -147,7 +149,7 @@ const SERVICE_MENU = [
     gradientStart: '#D4F7E7',
     gradientEnd: '#A8EDCC',
     emojiSize: 38,
-    route: '/orders/create/pol_ride',
+    route: '/pol_ride',
   },
   {
     id: 'polsend',
@@ -158,7 +160,7 @@ const SERVICE_MENU = [
     gradientStart: '#D3E7FD',
     gradientEnd: '#A8CFFA',
     emojiSize: 36,
-    route: '/orders/create/pol_send',
+    route: '/pol_send',
   },
   {
     id: 'lainnya',

@@ -6,7 +6,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // ─── Config ─────────────────────────────────────────────────────────────
-const BASE_URL = "http://192.168.43.148:3000/api";
+const BASE_URL = "http://192.168.18.43:3000/api";
 const TOKEN_KEY = "@sipolin_token";
 
 // ─── Axios Instance ─────────────────────────────────────────────────────
@@ -28,10 +28,20 @@ api.interceptors.request.use(
 
 // ─── Response Interceptor ───────────────────────────────────────────────
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // Pastikan response selalu memiliki struktur success
+    if (res.data && !res.data.hasOwnProperty('success')) {
+      res.data.success = true;
+    }
+    return res;
+  },
   async (err) => {
     if (err.response?.status === 401) {
       await AsyncStorage.removeItem(TOKEN_KEY);
+    }
+    // Format error agar konsisten dengan success: false
+    if (err.response?.data && !err.response.data.success) {
+      err.response.data.success = false;
     }
     return Promise.reject(err);
   }
@@ -70,8 +80,8 @@ export const ordersAPI = {
   create: (data) => api.post("/orders", data),
   update: (id, data) => api.put(`/orders/${id}`, data),
   delete: (id) => api.delete(`/orders/${id}`),
-  createRide: (data) => api.post("/orders/pol_ride", data),
-  createSend: (data) => api.post("/orders/pol_send", data),
+  createRide: (data) => api.post("/orders/pol_ride", data),  // ← pol_ride
+  createSend: (data) => api.post("/orders/pol_send", data),  // ← pol_send
   getAvailable: () => api.get("/orders/available"),
   acceptOrder: (id) => api.post(`/orders/${id}/accept`),
   completeOrder: (id) => api.post(`/orders/${id}/complete`),
@@ -83,31 +93,16 @@ export const ordersAPI = {
 export const notificationsAPI = {
   getAll: () => api.get("/notifications"),
   markAsRead: (id) => api.put(`/notifications/${id}/read`),
-  // Tambahin ini kalau mau hapus notif
   delete: (id) => api.delete(`/notifications/${id}`),
 };
 
-// ─── Chat API (GABUNGAN DARI CLAUDE) ────────────────────────────────────
+// ─── Chat API ────────────────────────────────────────────────────
 export const chatAPI = {
-  /** Ambil daftar inbox user */
-  getRooms: () => 
-    api.get("/chat/rooms"),
-
-  /** Ambil metadata satu room */
-  getRoomById: (roomId) => 
-    api.get(`/chat/rooms/${roomId}`),
-
-  /** Ambil history chat di dalam room (paginated) */
-  getMessages: (roomId, cursor = null) => 
-    api.get(`/chat/rooms/${roomId}/messages`, { params: { cursor, limit: 30 } }),
-
-  /** Bikin atau ambil room untuk order tertentu */
-  getOrCreateRoom: (orderId, customerId, driverId) =>
-    api.post("/chat/rooms", { orderId, customerId, driverId }),
-
-  /** Tandai pesan dibaca */
-  markRead: (roomId) => 
-    api.post(`/chat/rooms/${roomId}/read`),
+  getRooms: () => api.get("/chat/rooms"),
+  getRoomById: (roomId) => api.get(`/chat/rooms/${roomId}`),
+  getMessages: (roomId, cursor = null) => api.get(`/chat/rooms/${roomId}/messages`, { params: { cursor, limit: 30 } }),
+  getOrCreateRoom: (orderId, customerId, driverId) => api.post("/chat/rooms", { orderId, customerId, driverId }),
+  markRead: (roomId) => api.post(`/chat/rooms/${roomId}/read`),
 };
 
 export default api;
