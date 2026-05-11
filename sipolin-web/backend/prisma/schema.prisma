@@ -1,0 +1,89 @@
+// backend/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderType {
+  POL_RIDE
+  POL_SEND
+  NITIP_APA_AJA
+}
+
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  PICKED_UP
+  ON_THE_WAY
+  COMPLETED
+  CANCELLED
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String   @unique
+  password  String
+  role      Role     @default(CUSTOMER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[]
+
+  @@map("users")
+}
+
+model Driver {
+  id          String   @id @default(cuid())
+  name        String
+  phone       String   @unique
+  vehiclePlate String?
+  isActive    Boolean  @default(false)
+  lat         Float?
+  lng         Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orders Order[]
+
+  @@map("drivers")
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  type           OrderType
+  status         OrderStatus @default(PENDING)
+  pickupAddress  String
+  pickupLat      Float?
+  pickupLng      Float?
+  dropAddress    String
+  dropLat        Float?
+  dropLng        Float?
+  note           String?
+  fare           Float?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  userId   String
+  user     User    @relation(fields: [userId], references: [id])
+
+  driverId String?
+  driver   Driver? @relation(fields: [driverId], references: [id])
+
+  @@map("orders")
+}

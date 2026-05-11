@@ -2,7 +2,7 @@ import { io } from 'socket.io-client';
 import { tokenManager } from './api'; // ✅ Ambil dari api.js lo
 
 // ✅ PENTING: Pake IP yang sama kayak di api.js biar HP bisa konek lewat WiFi
-const SOCKET_URL = "http://192.168.43.148:3000"; 
+const SOCKET_URL = "http://10.0.163.203:3000"; 
 
 let socketInstance = null;
 

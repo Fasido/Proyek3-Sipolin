@@ -6,7 +6,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // ─── Config ─────────────────────────────────────────────────────────────
-const BASE_URL = "http://192.168.18.43:3000/api";
+const BASE_URL = "http://10.0.163.203:3000/api";
 const TOKEN_KEY = "@sipolin_token";
 
 // ─── Axios Instance ─────────────────────────────────────────────────────
