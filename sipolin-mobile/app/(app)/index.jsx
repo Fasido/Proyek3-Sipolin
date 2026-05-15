@@ -149,7 +149,8 @@ const SERVICE_MENU = [
     gradientStart: '#D4F7E7',
     gradientEnd: '#A8EDCC',
     emojiSize: 38,
-    route: '/pol_ride',
+    // 👇 UPDATE RUTE KE SINI 👇
+    route: '/orders/create/pol_ride',
   },
   {
     id: 'polsend',
@@ -160,7 +161,8 @@ const SERVICE_MENU = [
     gradientStart: '#D3E7FD',
     gradientEnd: '#A8CFFA',
     emojiSize: 36,
-    route: '/pol_send',
+    // 👇 UPDATE RUTE KE SINI 👇
+    route: '/orders/create/pol_send',
   },
   {
     id: 'lainnya',

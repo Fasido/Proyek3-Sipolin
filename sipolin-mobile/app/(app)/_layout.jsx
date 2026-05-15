@@ -1,25 +1,33 @@
 import React, { useEffect, useRef } from "react";
-import { ActivityIndicator, View, Animated, TouchableOpacity, Text, StyleSheet, Platform } from "react-native";
+import {
+  ActivityIndicator,
+  View,
+  Animated,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
 import { Tabs, useRouter } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 import { Home, MessageSquare, Clock, User } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// ─── Warna tema Gojek/Grab ───
+// ─── Warna tema Sipolin ───
 const COLORS = {
-  primary: "#00AA5B",       // Hijau Gojek
-  primaryDark: "#007A3E",   // Hijau tua untuk gradient
-  primaryLight: "#E6F7EE",  // Hijau muda untuk active bg
+  primary: "#10B981",
+  primaryDark: "#059669",
+  primaryLight: "#ECFDF5",
   inactive: "#9CA3AF",
   white: "#FFFFFF",
   border: "#F0F0F0",
-  shadow: "#00AA5B",
+  shadow: "#10B981",
 };
 
 // ─── Custom Tab Bar ───
 function CustomTabBar({ state, descriptors, navigation }) {
   const insets = useSafeAreaInsets();
-  const animValues = useRef(state.routes.map(() => new Animated.Value(0))).current;
+  const animValues = useRef(
+    state.routes.map(() => new Animated.Value(0))
+  ).current;
 
   useEffect(() => {
     state.routes.forEach((_, i) => {
@@ -30,15 +38,11 @@ function CustomTabBar({ state, descriptors, navigation }) {
         friction: 8,
       }).start();
     });
-  }, [state.index]);
+  }, [state.index, state.routes, animValues]);
 
-  const tabs = state.routes.filter((route) => {
-    const { options } = descriptors[route.key];
-    return options.href !== null && options.href !== undefined
-      ? true
-      : options.href === null
-      ? false
-      : true;
+  const visibleTabs = state.routes.filter((route) => {
+    const options = descriptors[route.key]?.options || {};
+    return options.href !== null;
   });
 
   const icons = {
@@ -65,33 +69,43 @@ function CustomTabBar({ state, descriptors, navigation }) {
         },
       ]}
     >
-      {/* Garis aksen hijau di atas */}
       <View style={styles.topAccent} />
 
-      {tabs.map((route, index) => {
-        const isFocused = state.index === state.routes.findIndex((r) => r.key === route.key);
+      {visibleTabs.map((route) => {
+        const routeIndex = state.routes.findIndex((r) => r.key === route.key);
+        const isFocused = state.index === routeIndex;
         const IconComponent = icons[route.name];
         const label = labels[route.name];
 
         if (!IconComponent) return null;
 
-        const scale = animValues[state.routes.findIndex((r) => r.key === route.key)].interpolate({
+        const scale = animValues[routeIndex].interpolate({
           inputRange: [0, 1],
           outputRange: [1, 1.12],
         });
 
-        const translateY = animValues[state.routes.findIndex((r) => r.key === route.key)].interpolate({
+        const translateY = animValues[routeIndex].interpolate({
           inputRange: [0, 1],
           outputRange: [0, -3],
         });
 
+        const labelOpacity = animValues[routeIndex].interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.6, 1],
+        });
+
+        const dotScale = animValues[routeIndex].interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, 1],
+        });
+
         const onPress = () => {
-          const routeIndex = state.routes.findIndex((r) => r.key === route.key);
           const event = navigation.emit({
             type: "tabPress",
             target: route.key,
             canPreventDefault: true,
           });
+
           if (!isFocused && !event.defaultPrevented) {
             navigation.navigate(route.name);
           }
@@ -101,27 +115,23 @@ function CustomTabBar({ state, descriptors, navigation }) {
           <TouchableOpacity
             key={route.key}
             onPress={onPress}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             style={styles.tabItem}
           >
             <Animated.View
               style={[
                 styles.iconWrapper,
-                isFocused && styles.iconWrapperActive,
                 {
                   transform: [{ scale }, { translateY }],
                 },
               ]}
             >
-              {/* Lingkaran hijau di belakang ikon aktif */}
               {isFocused && (
                 <Animated.View
                   style={[
                     styles.activeBackground,
                     {
-                      opacity: animValues[
-                        state.routes.findIndex((r) => r.key === route.key)
-                      ],
+                      opacity: animValues[routeIndex],
                     },
                   ]}
                 />
@@ -139,37 +149,20 @@ function CustomTabBar({ state, descriptors, navigation }) {
                 styles.tabLabel,
                 isFocused ? styles.tabLabelActive : styles.tabLabelInactive,
                 {
-                  opacity: animValues[
-                    state.routes.findIndex((r) => r.key === route.key)
-                  ].interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.6, 1],
-                  }),
+                  opacity: labelOpacity,
                 },
               ]}
             >
               {label}
             </Animated.Text>
 
-            {/* Dot indicator di bawah label */}
             {isFocused && (
               <Animated.View
                 style={[
                   styles.dotIndicator,
                   {
-                    opacity: animValues[
-                      state.routes.findIndex((r) => r.key === route.key)
-                    ],
-                    transform: [
-                      {
-                        scaleX: animValues[
-                          state.routes.findIndex((r) => r.key === route.key)
-                        ].interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0, 1],
-                        }),
-                      },
-                    ],
+                    opacity: animValues[routeIndex],
+                    transform: [{ scaleX: dotScale }],
                   },
                 ]}
               />
@@ -181,7 +174,54 @@ function CustomTabBar({ state, descriptors, navigation }) {
   );
 }
 
+// ─── Main Layout ───
+export default function AppLayout() {
+  const { token, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !token) {
+      router.replace("/login");
+    }
+  }, [token, isLoading, router]);
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  if (!token) return null;
+
+  return (
+    <Tabs
+      tabBar={(props) => <CustomTabBar {...props} />}
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Tabs.Screen name="index" />
+      <Tabs.Screen name="chat/index" />
+      <Tabs.Screen name="history" />
+      <Tabs.Screen name="profile" />
+
+      <Tabs.Screen name="chat/[id]" options={{ href: null }} />
+      <Tabs.Screen name="orders" options={{ href: null }} />
+      <Tabs.Screen name="location" options={{ href: null }} />
+      <Tabs.Screen name="notifications" options={{ href: null }} />
+    </Tabs>
+  );
+}
+
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: COLORS.white,
+  },
   tabBar: {
     flexDirection: "row",
     backgroundColor: COLORS.white,
@@ -189,12 +229,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    // Shadow iOS
+
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.06,
     shadowRadius: 12,
-    // Shadow Android
+
     elevation: 12,
   },
   topAccent: {
@@ -220,9 +260,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 12,
     position: "relative",
-  },
-  iconWrapperActive: {
-    // Efek subtle ketika aktif
   },
   activeBackground: {
     position: "absolute",
@@ -250,53 +287,3 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 });
-
-// ─── Main Layout ───
-export default function AppLayout() {
-  const { token, isLoading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isLoading && !token) {
-      router.replace("/login");
-    }
-  }, [token, isLoading]);
-
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
-
-  if (!token) return null;
-
-  return (
-    <Tabs
-      tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Tabs.Screen name="index" />
-      <Tabs.Screen name="chat/index" />
-      <Tabs.Screen name="history" />
-      <Tabs.Screen name="profile" />
-
-      {/* Hidden routes */}
-      <Tabs.Screen name="chat/[id]" options={{ href: null }} />
-      <Tabs.Screen name="pol-ride" options={{ href: null }} />
-      <Tabs.Screen name="pol-send" options={{ href: null }} />
-      <Tabs.Screen name="orders" options={{ href: null }} />
-      <Tabs.Screen name="location" options={{ href: null }} />
-      // Di _layout.jsx
-<Tabs.Screen
-  name="notifications"
-  options={{
-    href: null, // Sembunyiin dari navbar bawah tapi tetep bisa dibuka lewat icon lonceng di Home
-  }}
-/>
-    </Tabs>
-  );
-}
