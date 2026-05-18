@@ -31,12 +31,14 @@ import ordersRoutes from './routes/orders.js';
 import userRoutes from './routes/users.js';
 import notificationRoutes from './routes/notifications.js';
 import chatRoutes from './routes/chat.routes.js'; 
+import chatbotRoutes from "./routes/chatbotRoutes(gakepake).js";
 
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/chat', chatRoutes);
+app.use("/api/chatbot", chatbotRoutes);
 
 // Legacy reports endpoint (for backward compatibility)
 app.use('/api/reports', ordersRoutes);
