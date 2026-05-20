@@ -141,13 +141,40 @@ model Message {
   @@map("messages")
 }
 
-model AiChat {
+model Restaurant {
   id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages  Json     // array of { role: "user"|"assistant", content: string }
+  name      String
+  category  String   // pedas, manis, makanan_berat, dessert, minuman
+  menu      String
+  location  String
+  rating    Float    @default(0)
+  price     Float?   // harga rata-rata
+  imageUrl  String?  // foto restoran/makanan
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  // Relasi ke rekomendasi AI
+  recommendations FoodRecommendation[]
+  
+  @@map("restaurants")
+}
 
-  @@map("ai_chats")
+model FoodRecommendation {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurantId String
+  restaurant  Restaurant @relation(fields: [restaurantId], references: [id])
+  prompt      String   @db.Text  // prompt user
+  response    String   @db.Text  // response AI
+  intentType  String   // taste, category, none
+  intentValue String?  // pedas, manis, makanan_berat, dll
+  isLiked     Boolean  @default(false) // user suka rekomendasi ini?
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
+  @@index([restaurantId])
+  @@index([createdAt(sort: Desc)])
+  @@map("food_recommendations")
 }

@@ -1,6 +1,11 @@
 id,nama_tempat,kategori,menu,lokasi,rating
 1,Seblak Jeletot,pedas,Seblak Mercon,Bandung,4.7
-2,Sweet Dessert,dessert,Chocolate Ice Cream,Jakarta,4.8
+2,Sweet Dessert,manis,Chocolate Ice Cream,Jakarta,4.8
 3,Warteg Bahari,makanan berat,Ayam Goreng,Cirebon,4.5
 4,Mie Gacoan,pedas,Mie Level 8,Bandung,4.6
 5,Kopi Kenangan,manis,Kopi Gula Aren,Jakarta,4.4
+6,Pecel Lele Lela,makanan berat,Pecel Lele + Nasi,Tangerang,4.7
+7,Es Dawet Ayu,minuman,Es Dawet,Cirebon,4.5
+8,Bakso Pak Man,makanan berat,Bakso Urat,Solo,4.9
+9,Martabak Manis,dessert,Martabak Coklat Kacang,Bandung,4.8
+10,Thai Tea House,minuman,Thai Tea Original,Jakarta,4.6
