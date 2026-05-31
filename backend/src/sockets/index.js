@@ -1,11 +1,5 @@
-/**
- * backend/src/sockets/index.js
- *
- * Initialises Socket.io.
- * - Each user auto-joins their personal room (userId string).
- * - Drivers can join the "drivers" room to receive order:new broadcasts.
- * - Exports getIO() so controllers can emit events without circular deps.
- */
+// backend/src/sockets/index.js
+// Initialises Socket.io untuk Sipolin.
 
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
@@ -25,10 +19,8 @@ export function initSocketIO(httpServer) {
     transports: ["polling", "websocket"],
   });
 
-  // ── Auth middleware ──────────────────────────────────────────────────────
   io.use((socket, next) => {
-    const token =
-      socket.handshake.auth?.token ?? socket.handshake.query?.token;
+    const token = socket.handshake.auth?.token ?? socket.handshake.query?.token;
 
     if (!token) {
       return next(new Error("Authentication required"));
@@ -36,27 +28,34 @@ export function initSocketIO(httpServer) {
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      socket.data.user = decoded;
+      const userId = decoded.userId || decoded.id;
+
+      if (!userId) {
+        return next(new Error("Invalid token payload"));
+      }
+
+      socket.data.user = {
+        ...decoded,
+        id: userId,
+        userId,
+        role: String(decoded.role || "").toLowerCase(),
+        name: decoded.name || decoded.email || "User",
+      };
+
       next();
-    } catch {
+    } catch (error) {
       next(new Error("Invalid or expired token"));
     }
   });
 
-  // ── Connection handler ───────────────────────────────────────────────────
   io.on("connection", (socket) => {
-    const user = socket.data.user;
-    const userId = (user.userId ?? user.id)?.toString();
+    const user = socket.data.user || {};
+    const userId = (user.userId || user.id)?.toString();
 
     if (userId) {
-      // Personal room — used to push targeted notifications
       socket.join(userId);
     }
 
-    // ── Order rooms ────────────────────────────────────────────────────────
-    // Drivers subscribe to the shared "drivers" room to receive new orders.
-    // The mobile client emits "driver:subscribe" right after connecting
-    // when the logged-in user has role === 'driver'.
     socket.on("driver:subscribe", () => {
       socket.join("drivers");
       console.log(`[socket] Driver ${userId} joined drivers room`);
@@ -66,7 +65,6 @@ export function initSocketIO(httpServer) {
       socket.leave("drivers");
     });
 
-    // Allow a client to subscribe to a specific order room for live updates
     socket.on("order:subscribe", ({ orderId }) => {
       if (orderId) socket.join(`order:${orderId}`);
     });
@@ -75,11 +73,10 @@ export function initSocketIO(httpServer) {
       if (orderId) socket.leave(`order:${orderId}`);
     });
 
-    // ── Chat handlers ──────────────────────────────────────────────────────
     registerChatHandlers(io, socket);
 
     socket.on("disconnect", (reason) => {
-      // console.log(`[socket] ${userId} disconnected: ${reason}`);
+      console.log(`[socket] ${userId} disconnected: ${reason}`);
     });
   });
 
@@ -87,15 +84,10 @@ export function initSocketIO(httpServer) {
   return io;
 }
 
-/**
- * Returns the Socket.io server instance.
- * Throws if called before initSocketIO().
- */
 export function getIO() {
   if (!io) {
-    throw new Error(
-      "Socket.io has not been initialised. Call initSocketIO() first."
-    );
+    throw new Error("Socket.io has not been initialised. Call initSocketIO() first.");
   }
+
   return io;
 }

@@ -8,7 +8,13 @@ import {
 } from "react-native";
 import { Tabs, useRouter } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
-import { Home, MessageSquare, Clock, User } from "lucide-react-native";
+import {
+  Home,
+  MessageSquare,
+  Bot,
+  Clock,
+  User,
+} from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ─── Warna tema Sipolin ───
@@ -16,15 +22,18 @@ const COLORS = {
   primary: "#10B981",
   primaryDark: "#059669",
   primaryLight: "#ECFDF5",
+  primarySoft: "#D1FAE5",
   inactive: "#9CA3AF",
   white: "#FFFFFF",
-  border: "#F0F0F0",
+  border: "#F0FDF4",
   shadow: "#10B981",
+  text: "#0F172A",
 };
 
 // ─── Custom Tab Bar ───
 function CustomTabBar({ state, descriptors, navigation }) {
   const insets = useSafeAreaInsets();
+
   const animValues = useRef(
     state.routes.map(() => new Animated.Value(0))
   ).current;
@@ -48,6 +57,7 @@ function CustomTabBar({ state, descriptors, navigation }) {
   const icons = {
     index: Home,
     "chat/index": MessageSquare,
+    "chatbot/index": Bot,
     history: Clock,
     profile: User,
   };
@@ -55,6 +65,7 @@ function CustomTabBar({ state, descriptors, navigation }) {
   const labels = {
     index: "Home",
     "chat/index": "Chat",
+    "chatbot/index": "AI",
     history: "Histori",
     profile: "Profil",
   };
@@ -64,7 +75,7 @@ function CustomTabBar({ state, descriptors, navigation }) {
       style={[
         styles.tabBar,
         {
-          height: 64 + insets.bottom,
+          height: 68 + insets.bottom,
           paddingBottom: insets.bottom > 0 ? insets.bottom : 10,
         },
       ]}
@@ -91,7 +102,7 @@ function CustomTabBar({ state, descriptors, navigation }) {
 
         const labelOpacity = animValues[routeIndex].interpolate({
           inputRange: [0, 1],
-          outputRange: [0.6, 1],
+          outputRange: [0.55, 1],
         });
 
         const dotScale = animValues[routeIndex].interpolate({
@@ -138,9 +149,9 @@ function CustomTabBar({ state, descriptors, navigation }) {
               )}
 
               <IconComponent
-                size={22}
+                size={route.name === "chatbot/index" ? 23 : 22}
                 color={isFocused ? COLORS.primary : COLORS.inactive}
-                strokeWidth={isFocused ? 2.5 : 1.8}
+                strokeWidth={isFocused ? 2.6 : 1.9}
               />
             </Animated.View>
 
@@ -204,6 +215,7 @@ export default function AppLayout() {
     >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="chat/index" />
+      <Tabs.Screen name="chatbot/index" />
       <Tabs.Screen name="history" />
       <Tabs.Screen name="profile" />
 
@@ -222,63 +234,72 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: COLORS.white,
   },
+
   tabBar: {
     flexDirection: "row",
     backgroundColor: COLORS.white,
-    paddingTop: 10,
-    paddingHorizontal: 8,
+    paddingTop: 9,
+    paddingHorizontal: 6,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
 
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -5 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
 
-    elevation: 12,
+    elevation: 14,
   },
+
   topAccent: {
     position: "absolute",
     top: 0,
-    left: "15%",
-    right: "15%",
-    height: 2.5,
+    left: "14%",
+    right: "14%",
+    height: 3,
     backgroundColor: COLORS.primary,
-    borderBottomLeftRadius: 4,
-    borderBottomRightRadius: 4,
+    borderBottomLeftRadius: 999,
+    borderBottomRightRadius: 999,
   },
+
   tabItem: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingTop: 4,
   },
+
   iconWrapper: {
     width: 44,
     height: 36,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 12,
+    borderRadius: 14,
     position: "relative",
   },
+
   activeBackground: {
     position: "absolute",
     inset: 0,
     backgroundColor: COLORS.primaryLight,
-    borderRadius: 12,
+    borderRadius: 14,
   },
+
   tabLabel: {
-    fontSize: 10.5,
-    fontWeight: "600",
+    fontSize: 10.2,
+    fontWeight: "700",
     marginTop: 2,
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
   },
+
   tabLabelActive: {
     color: COLORS.primary,
   },
+
   tabLabelInactive: {
     color: COLORS.inactive,
   },
+
   dotIndicator: {
     width: 4,
     height: 4,

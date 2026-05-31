@@ -88,10 +88,7 @@ export default function PolRideScreen() {
         return;
       }
 
-      router.replace({
-        pathname: "/orders/[id]/track",
-        params: { id: String(orderId) },
-      });
+      router.replace(`/orders/${orderId}`);
     } catch (error) {
       console.error("Error creating Pol-Ride:", error);
 

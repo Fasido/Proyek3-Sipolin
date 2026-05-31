@@ -19,6 +19,7 @@ import {
   createPolRide,
   createPolSend,
   acceptOrder,
+  updateOrderProgress,
   completeOrder,
   cancelOrder,
 } from "../controllers/orderController.js";
@@ -62,6 +63,9 @@ router.get("/:id", getOrderById);
 
 // POST   /orders/:id/accept
 router.post("/:id/accept", acceptOrder);
+
+// POST   /orders/:id/progress
+router.post("/:id/progress", updateOrderProgress);
 
 // POST   /orders/:id/complete
 router.post("/:id/complete", completeOrder);

@@ -1,22 +1,29 @@
-import express from 'express';
-import { 
-  getMyRooms, 
-  createRoom, 
-  getRoom, 
-  getRoomMessages, 
-  markRoomAsRead 
-} from '../controllers/chat.controllers.js'; 
+// backend/src/routes/chat.routes.js
 
-// ✅ INI YANG BENER: Pakai verifyToken, BUKAN authenticateToken
-import { verifyToken } from '../middleware/auth.js'; 
+import express from "express";
+import {
+  getMyRooms,
+  createRoom,
+  getRoom,
+  getRoomMessages,
+  sendRoomMessage,
+  markRoomAsRead,
+} from "../controllers/chat.controllers.js";
+import { verifyToken } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// ✅ Semua rutenya pakai verifyToken
-router.get('/rooms', verifyToken, getMyRooms); 
-router.post('/rooms', verifyToken, createRoom); 
-router.get('/rooms/:roomId', verifyToken, getRoom); 
-router.get('/rooms/:roomId/messages', verifyToken, getRoomMessages); 
-router.post('/rooms/:roomId/read', verifyToken, markRoomAsRead); 
+router.use(verifyToken, (req, _res, next) => {
+  if (req.userId && !req.user) req.user = { id: req.userId, role: req.userRole };
+  if (req.user?.id && !req.userId) req.userId = req.user.id;
+  next();
+});
+
+router.get("/rooms", getMyRooms);
+router.post("/rooms", createRoom);
+router.get("/rooms/:roomId", getRoom);
+router.get("/rooms/:roomId/messages", getRoomMessages);
+router.post("/rooms/:roomId/messages", sendRoomMessage);
+router.post("/rooms/:roomId/read", markRoomAsRead);
 
 export default router;

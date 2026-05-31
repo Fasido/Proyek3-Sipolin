@@ -1,288 +1,318 @@
-// src/services/chat.service.js
-// ─────────────────────────────────────────────────────────────────────────────
-// Pure data-access layer for the Chat feature.
-// No Express req/res here — only Prisma calls and plain JS objects.
-// Both the REST controllers AND the Socket.io handlers call these functions,
-// which keeps the business logic in one place.
-// ─────────────────────────────────────────────────────────────────────────────
+// backend/src/services/chat.service.js
+// Service layer chat Sipolin.
+// Semua query Prisma untuk chat dipusatkan di sini supaya controller dan socket tetap rapi.
 
-import prisma from "../lib/prisma.js";
+import { PrismaClient } from "@prisma/client";
 
-// ─── Reusable selector — the fields we always want on a sender object ─────────
-const SENDER_SELECT = {
+const prisma = new PrismaClient();
+
+const userSelect = {
   id: true,
   name: true,
-  avatar: true,
+  email: true,
+  nim: true,
+  phone: true,
   role: true,
+  avatar: true,
+  profilePicture: true,
+  plateNumber: true,
+  vehicleDetail: true,
 };
 
-// ─── Reusable selector — full message shape returned to clients ───────────────
-const MESSAGE_SELECT = {
+const orderSelect = {
   id: true,
-  chatRoomId: true,
-  senderId: true,
-  text: true,
-  isRead: true,
+  type: true,
+  title: true,
+  status: true,
+  pickup: true,
+  destination: true,
+  price: true,
+  customerId: true,
+  driverId: true,
   createdAt: true,
-  sender: { select: SENDER_SELECT },
+  updatedAt: true,
 };
 
-// =============================================================================
-// ROOM OPERATIONS
-// =============================================================================
+const messageInclude = {
+  sender: {
+    select: userSelect,
+  },
+};
 
-/**
- * findOrCreateChatRoom
- * ─────────────────────
- * Called when a driver accepts an order. Guarantees idempotency — if the room
- * already exists (e.g., due to a retry) it is simply returned.
- *
- * @param {string} orderId
- * @param {string} customerId
- * @param {string} driverId
- * @returns {Promise<ChatRoom>}
- */
-export async function findOrCreateChatRoom(orderId, customerId, driverId) {
-  // upsert on the @unique orderId field — safe to call multiple times
-  return prisma.chatRoom.upsert({
-    where: { orderId },
-    update: {}, // already exists — nothing to change
-    create: {
-      orderId,
-      customerId,
-      driverId,
+const roomIncludeBase = {
+  order: {
+    select: orderSelect,
+  },
+  customer: {
+    select: userSelect,
+  },
+  driver: {
+    select: userSelect,
+  },
+  messages: {
+    take: 1,
+    orderBy: {
+      createdAt: "desc",
     },
-    include: {
-      customer: { select: SENDER_SELECT },
-      driver: { select: SENDER_SELECT },
-      order: {
-        select: {
-          id: true,
-          title: true,
-          status: true,
-          pickup: true,
-          destination: true,
-        },
-      },
-    },
+    include: messageInclude,
+  },
+};
+
+const asClientUser = (user) => {
+  if (!user) return user;
+  return {
+    ...user,
+    role: String(user.role || "").toLowerCase(),
+  };
+};
+
+const normalizeRoom = (room, userId = null) => {
+  if (!room) return room;
+
+  const unreadCount =
+    room._count?.messages ??
+    room.unreadCount ??
+    0;
+
+  return {
+    ...room,
+    customer: asClientUser(room.customer),
+    driver: asClientUser(room.driver),
+    unreadCount,
+  };
+};
+
+const assertParticipantWhere = (roomId, userId) => ({
+  id: roomId,
+  OR: [{ customerId: userId }, { driverId: userId }],
+});
+
+export async function validateRoomMembership(roomId, userId) {
+  if (!roomId || !userId) return false;
+
+  const count = await prisma.chatRoom.count({
+    where: assertParticipantWhere(roomId, userId),
   });
+
+  return count > 0;
 }
 
-/**
- * getChatRoomsForUser
- * ────────────────────
- * Returns all chat rooms for a given user (works for both customers and
- * drivers because the schema stores both IDs directly on ChatRoom).
- * Results are ordered by most-recent activity for the inbox screen.
- *
- * @param {string} userId
- * @returns {Promise<ChatRoom[]>}
- */
 export async function getChatRoomsForUser(userId) {
-  return prisma.chatRoom.findMany({
+  const rooms = await prisma.chatRoom.findMany({
     where: {
-      // Prisma OR: match if user is either participant
       OR: [{ customerId: userId }, { driverId: userId }],
     },
-    select: {
-      id: true,
-      lastMessage: true,
-      lastMessageAt: true,
-      createdAt: true,
-      // Include both participants so the client can display the OTHER person
-      customer: { select: SENDER_SELECT },
-      driver: { select: SENDER_SELECT },
-      order: {
-        select: {
-          id: true,
-          title: true,
-          status: true,
-          pickup: true,
-          destination: true,
-        },
-      },
-      // Unread count: messages NOT sent by this user that are still unread
+    include: {
+      ...roomIncludeBase,
       _count: {
         select: {
           messages: {
             where: {
+              senderId: {
+                not: userId,
+              },
               isRead: false,
-              senderId: { not: userId },
             },
           },
         },
       },
     },
-    orderBy: {
-      // nulls last — new empty rooms fall to the bottom
-      lastMessageAt: "desc",
-    },
+    orderBy: [
+      {
+        lastMessageAt: "desc",
+      },
+      {
+        createdAt: "desc",
+      },
+    ],
   });
+
+  return rooms.map((room) => normalizeRoom(room, userId));
 }
 
-/**
- * getChatRoomById
- * ────────────────
- * Fetches a single room and validates that the requesting user is a member.
- * Returns null if the room doesn't exist OR the user is not a participant —
- * the controller maps null → 403/404 as appropriate.
- *
- * @param {string} roomId
- * @param {string} userId  - the requesting user
- * @returns {Promise<ChatRoom|null>}
- */
 export async function getChatRoomById(roomId, userId) {
-  return prisma.chatRoom.findFirst({
-    where: {
-      id: roomId,
-      OR: [{ customerId: userId }, { driverId: userId }],
-    },
+  const room = await prisma.chatRoom.findFirst({
+    where: assertParticipantWhere(roomId, userId),
     include: {
-      customer: { select: SENDER_SELECT },
-      driver: { select: SENDER_SELECT },
-      order: {
+      ...roomIncludeBase,
+      _count: {
         select: {
-          id: true,
-          title: true,
-          status: true,
-          pickup: true,
-          destination: true,
+          messages: {
+            where: {
+              senderId: {
+                not: userId,
+              },
+              isRead: false,
+            },
+          },
         },
       },
     },
   });
+
+  return normalizeRoom(room, userId);
 }
 
-// =============================================================================
-// MESSAGE OPERATIONS
-// =============================================================================
-
-/**
- * getMessages
- * ────────────
- * Cursor-based pagination — fetches `limit` messages BEFORE `cursor`.
- * The client scrolls up to trigger the next page.
- *
- * Returned order is oldest-first (ascending createdAt) so the FlatList
- * renders naturally from top to bottom without reversing.
- *
- * @param {string}  roomId
- * @param {string}  userId  - used to mark fetched messages as read
- * @param {object}  opts
- * @param {string}  [opts.cursor]   - message id — fetch messages before this
- * @param {number}  [opts.limit=30]
- * @returns {Promise<{ messages: Message[], hasMore: boolean, nextCursor: string|null }>}
- */
-export async function getMessages(roomId, userId, { cursor, limit = 30 } = {}) {
-  // Fetch one extra record to determine whether another page exists
-  const take = limit + 1;
-
-  const messages = await prisma.message.findMany({
-    where: { chatRoomId: roomId },
-    select: MESSAGE_SELECT,
-    orderBy: { createdAt: "desc" }, // desc so cursor gives us "older" messages
-    take,
-    ...(cursor
-      ? {
-          cursor: { id: cursor },
-          skip: 1, // skip the cursor record itself
-        }
-      : {}),
+export async function findOrCreateChatRoom(orderId, customerId, driverId) {
+  const room = await prisma.chatRoom.upsert({
+    where: {
+      orderId,
+    },
+    update: {
+      customerId,
+      driverId,
+    },
+    create: {
+      orderId,
+      customerId,
+      driverId,
+    },
+    include: roomIncludeBase,
   });
 
-  const hasMore = messages.length === take;
-  if (hasMore) messages.pop(); // remove the extra sentinel record
-
-  // Reverse so the client receives oldest-first
-  messages.reverse();
-
-  const nextCursor = hasMore ? messages[0]?.id ?? null : null;
-
-  // Side-effect: mark all messages in this room sent by OTHER users as read
-  // Fire-and-forget — we don't await this to keep the response fast.
-  markMessagesAsRead(roomId, userId).catch((err) =>
-    console.error("[chat.service] markMessagesAsRead failed:", err)
-  );
-
-  return { messages, hasMore, nextCursor };
+  return normalizeRoom(room);
 }
 
-/**
- * saveMessage
- * ────────────
- * Persists a new Message AND updates the ChatRoom's denormalised
- * lastMessage + lastMessageAt fields in a single atomic transaction.
- *
- * Using $transaction ensures the inbox cache is never stale — either both
- * writes succeed or neither does.
- *
- * @param {object} data
- * @param {string} data.chatRoomId
- * @param {string} data.senderId
- * @param {string} data.text
- * @returns {Promise<Message>}  the created message with sender included
- */
-export async function saveMessage({ chatRoomId, senderId, text }) {
-  const [message] = await prisma.$transaction([
-    // 1. Create the message
-    prisma.message.create({
-      data: { chatRoomId, senderId, text },
-      select: MESSAGE_SELECT,
-    }),
-    // 2. Update the room's inbox preview cache atomically
-    prisma.chatRoom.update({
-      where: { id: chatRoomId },
-      data: {
-        lastMessage: text,
-        lastMessageAt: new Date(),
-      },
-    }),
-  ]);
+export async function getMessages(roomId, userId, { cursor, limit = 30 } = {}) {
+  const isMember = await validateRoomMembership(roomId, userId);
+  if (!isMember) {
+    throw new Error("Access denied");
+  }
 
-  return message;
+  const take = Math.min(Math.max(Number(limit) || 30, 1), 50);
+
+  const messages = await prisma.message.findMany({
+    where: {
+      chatRoomId: roomId,
+    },
+    take: take + 1,
+    ...(cursor
+      ? {
+          cursor: {
+            id: cursor,
+          },
+          skip: 1,
+        }
+      : {}),
+    orderBy: {
+      createdAt: "desc",
+    },
+    include: messageInclude,
+  });
+
+  const hasNextPage = messages.length > take;
+  const sliced = hasNextPage ? messages.slice(0, take) : messages;
+  const ordered = sliced.reverse();
+
+  return {
+    items: ordered,
+    nextCursor: hasNextPage ? sliced[sliced.length - 1]?.id : null,
+    hasNextPage,
+  };
 }
 
-/**
- * markMessagesAsRead
- * ───────────────────
- * Bulk-marks all unread messages in a room that were NOT sent by `userId`
- * (i.e., messages the OTHER participant sent, now being read).
- *
- * Called automatically when a user fetches messages and also when they
- * emit a `join_room` socket event.
- *
- * @param {string} roomId
- * @param {string} userId  - the reader, NOT the sender
- * @returns {Promise<{ count: number }>}
- */
 export async function markMessagesAsRead(roomId, userId) {
+  const isMember = await validateRoomMembership(roomId, userId);
+  if (!isMember) {
+    throw new Error("Access denied");
+  }
+
   return prisma.message.updateMany({
     where: {
       chatRoomId: roomId,
+      senderId: {
+        not: userId,
+      },
       isRead: false,
-      senderId: { not: userId }, // only mark OTHER person's messages
     },
-    data: { isRead: true },
+    data: {
+      isRead: true,
+    },
   });
 }
 
-/**
- * validateRoomMembership
- * ───────────────────────
- * Lightweight check — used by the socket handler before allowing any event.
- * Returns true if userId is either the customer or driver of this room.
- *
- * @param {string} roomId
- * @param {string} userId
- * @returns {Promise<boolean>}
- */
-export async function validateRoomMembership(roomId, userId) {
+export async function saveMessage({ chatRoomId, senderId, text }) {
   const room = await prisma.chatRoom.findFirst({
-    where: {
-      id: roomId,
-      OR: [{ customerId: userId }, { driverId: userId }],
+    where: assertParticipantWhere(chatRoomId, senderId),
+    include: {
+      customer: {
+        select: userSelect,
+      },
+      driver: {
+        select: userSelect,
+      },
+      order: {
+        select: orderSelect,
+      },
     },
-    select: { id: true },
   });
-  return room !== null;
+
+  if (!room) {
+    throw new Error("Room not found or access denied");
+  }
+
+  const cleanText = String(text || "").trim();
+
+  if (!cleanText) {
+    throw new Error("Text is required");
+  }
+
+  if (cleanText.length > 2000) {
+    throw new Error("Message exceeds 2000 characters");
+  }
+
+  const recipientId = senderId === room.customerId ? room.driverId : room.customerId;
+  const senderName =
+    senderId === room.customerId
+      ? room.customer?.name || "Pembeli"
+      : room.driver?.name || "Driver";
+
+  const result = await prisma.$transaction(async (tx) => {
+    const message = await tx.message.create({
+      data: {
+        chatRoomId,
+        senderId,
+        text: cleanText,
+      },
+      include: messageInclude,
+    });
+
+    await tx.chatRoom.update({
+      where: {
+        id: chatRoomId,
+      },
+      data: {
+        lastMessage: cleanText,
+        lastMessageAt: message.createdAt,
+      },
+    });
+
+    const notification = await tx.notification.create({
+      data: {
+        userId: recipientId,
+        title: `Pesan baru dari ${senderName}`,
+        message: cleanText.length > 80 ? `${cleanText.slice(0, 80)}...` : cleanText,
+        type: "chat_message",
+        relatedOrderId: room.orderId,
+      },
+    });
+
+    return {
+      message,
+      notification,
+    };
+  });
+
+  return {
+    ...result.message,
+    notification: result.notification,
+    recipientId,
+    chatRoom: {
+      id: room.id,
+      orderId: room.orderId,
+      customerId: room.customerId,
+      driverId: room.driverId,
+      order: room.order,
+    },
+  };
 }

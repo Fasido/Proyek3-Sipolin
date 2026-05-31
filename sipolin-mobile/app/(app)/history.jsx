@@ -46,7 +46,7 @@ import {
   Truck,
 } from "lucide-react-native";
 
-import { ordersAPI } from "../../services/api";
+import { ordersAPI, extractApiList } from "../../services/api";
 
 // ─── Design Tokens Sipolin ───────────────────────────────────────────────────
 const C = {
@@ -232,18 +232,7 @@ const normalizeOrder = (raw) => {
 };
 
 const extractOrders = (payload) => {
-  const possible =
-    Array.isArray(payload)
-      ? payload
-      : Array.isArray(payload?.data)
-      ? payload.data
-      : Array.isArray(payload?.orders)
-      ? payload.orders
-      : Array.isArray(payload?.data?.orders)
-      ? payload.data.orders
-      : [];
-
-  return possible
+  return extractApiList(payload)
     .map(normalizeOrder)
     .filter((order) => order && order.id)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -586,8 +575,7 @@ export default function HistoryScreen() {
       if (!silent) setLoading(true);
 
       const res = await ordersAPI.getHistory();
-      const payload = res?.data;
-      const list = extractOrders(payload);
+      const list = extractOrders(res);
 
       console.log("[History] orders loaded:", list.length, list);
 
@@ -641,10 +629,7 @@ export default function HistoryScreen() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 
-    router.push({
-      pathname: "/orders/[id]/track",
-      params: { id: String(order.id) },
-    });
+    router.push(`/orders/${order.id}`);
   };
 
   const handleReorder = (order) => {

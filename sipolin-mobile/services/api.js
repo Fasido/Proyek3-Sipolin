@@ -4,10 +4,13 @@
  *
  * Aman untuk:
  * - AuthContext lama
- * - Dashboard lama yang pakai ordersAPI.getAll()
- * - History yang pakai ordersAPI.getHistory()
- * - Create Pol-Ride / Pol-Send
- * - Tracking yang pakai getOrderById / getById
+ * - Dashboard customer/driver
+ * - Order Pol-Ride / Pol-Send
+ * - Manual tracking progress
+ * - History
+ * - Chat realtime + REST fallback
+ * - Notifications
+ * - AI Chatbot Sipolin
  */
 
 import axios from "axios";
@@ -20,22 +23,44 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Buat .env di sipolin-mobile:
 // EXPO_PUBLIC_API_URL=http://IP-LAPTOP:3000/api
 
-const DEFAULT_BASE_URL = "http://10.0.163.203:3000/api";
+const DEFAULT_BASE_URL = "http://192.168.10.19:3000/api";
 
-const BASE_URL =
+const RAW_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL &&
   process.env.EXPO_PUBLIC_API_URL.trim().length > 0
     ? process.env.EXPO_PUBLIC_API_URL.trim()
     : DEFAULT_BASE_URL;
 
+const BASE_URL = RAW_BASE_URL.replace(/\/+$/, "");
+const SOCKET_URL = BASE_URL.replace(/\/api$/, "");
+
 // Token keys dibuat banyak biar kompatibel dengan AuthContext lama
 const TOKEN_KEY = "@sipolin_token";
 const TOKEN_ALIASES = ["@sipolin_token", "token", "authToken", "accessToken"];
+
+// Export config biar hook socket bisa pakai
+export const API_BASE_URL = BASE_URL;
+export const BASE_API_URL = BASE_URL;
+export const API_URL = BASE_URL;
+export const WS_URL = SOCKET_URL;
+export const SOCKET_BASE_URL = SOCKET_URL;
 
 // ─────────────────────────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────────────────────────
 const isDev = typeof __DEV__ !== "undefined" && __DEV__;
+
+const cleanString = (value) => {
+  return String(value || "").trim();
+};
+
+const normalizeId = (id) => {
+  if (id === undefined || id === null || id === "") {
+    throw new Error("ID tidak valid.");
+  }
+
+  return String(id);
+};
 
 const extractTokenFromResponse = (response) => {
   const data = response?.data;
@@ -49,6 +74,56 @@ const extractTokenFromResponse = (response) => {
     data?.data?.user?.token ||
     null
   );
+};
+
+export const extractApiItem = (payload) => {
+  if (!payload) return null;
+
+  const data = payload?.data ?? payload;
+
+  if (data?.data && !Array.isArray(data.data)) return data.data;
+  if (data?.item) return data.item;
+  if (data?.order) return data.order;
+  if (data?.room) return data.room;
+  if (data?.message) return data.message;
+  if (data?.user) return data.user;
+
+  return data;
+};
+
+export const extractApiList = (payload) => {
+  if (!payload) return [];
+
+  const data = payload?.data ?? payload;
+
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.orders)) return data.orders;
+  if (Array.isArray(data?.rooms)) return data.rooms;
+  if (Array.isArray(data?.messages)) return data.messages;
+  if (Array.isArray(data?.notifications)) return data.notifications;
+  if (Array.isArray(data?.data?.orders)) return data.data.orders;
+  if (Array.isArray(data?.data?.rooms)) return data.data.rooms;
+  if (Array.isArray(data?.data?.messages)) return data.data.messages;
+  if (Array.isArray(data?.data?.notifications)) return data.data.notifications;
+
+  return [];
+};
+
+export const extractStats = (payload) => {
+  const data = payload?.data ?? payload;
+
+  return {
+    totalOrders: data?.totalOrders ?? data?.data?.totalOrders ?? 0,
+    totalTrips: data?.totalTrips ?? data?.data?.totalTrips ?? data?.totalOrders ?? 0,
+    activeOrders: data?.activeOrders ?? data?.data?.activeOrders ?? 0,
+    completedOrders: data?.completedOrders ?? data?.data?.completedOrders ?? 0,
+    unreadNotifications:
+      data?.unreadNotifications ?? data?.data?.unreadNotifications ?? 0,
+    ordersByStatus: data?.ordersByStatus ?? data?.data?.ordersByStatus ?? {},
+    avgRating: data?.avgRating ?? data?.data?.avgRating ?? 5,
+    totalSavings: data?.totalSavings ?? data?.data?.totalSavings ?? 0,
+  };
 };
 
 const getStoredToken = async () => {
@@ -84,18 +159,6 @@ const removeTokenEverywhere = async () => {
   }
 };
 
-const normalizeId = (id) => {
-  if (id === undefined || id === null || id === "") {
-    throw new Error("ID tidak valid.");
-  }
-
-  return String(id);
-};
-
-const cleanString = (value) => {
-  return String(value || "").trim();
-};
-
 const normalizeOrderPayload = (data = {}) => {
   const pickupLocation =
     data.pickupLocation ||
@@ -115,67 +178,55 @@ const normalizeOrderPayload = (data = {}) => {
     ...data,
     pickupLocation: cleanString(pickupLocation),
     dropoffLocation: cleanString(dropoffLocation),
-    note: cleanString(data.note),
+    note: cleanString(data.note || data.description),
   };
 };
 
 const normalizePolSendPayload = (data = {}) => {
-  const itemName = data.itemName || data.foodName || data.title || "";
-
-  const restaurantName =
-    data.restaurantName ||
-    data.pickupLocation ||
-    data.pickupAddress ||
-    data.pickup ||
+  const itemName =
+    data.itemName ||
+    data.foodName ||
+    data.packageName ||
+    data.goodsName ||
+    data.title ||
     "";
 
   const pickupLocation =
     data.pickupLocation ||
     data.pickupAddress ||
-    data.restaurantName ||
     data.pickup ||
+    data.restaurantName ||
+    data.senderLocation ||
+    data.from ||
     "";
 
   const dropoffLocation =
     data.dropoffLocation ||
     data.dropoffAddress ||
     data.destination ||
+    data.receiverLocation ||
     data.to ||
+    itemName ||
     "";
 
-  const estimatedItemPrice =
-    data.estimatedItemPrice !== undefined
-      ? data.estimatedItemPrice
-      : data.foodPrice;
-
-  const foodPrice =
-    data.foodPrice !== undefined ? data.foodPrice : data.estimatedItemPrice;
+  const rawPrice =
+    data.foodPrice ??
+    data.itemPrice ??
+    data.price ??
+    data.estimatedItemPrice ??
+    20000;
 
   return {
     ...data,
     itemName: cleanString(itemName),
     foodName: cleanString(data.foodName || itemName),
-    restaurantName: cleanString(restaurantName),
+    restaurantName: cleanString(data.restaurantName || pickupLocation),
     pickupLocation: cleanString(pickupLocation),
     dropoffLocation: cleanString(dropoffLocation),
-    estimatedItemPrice,
-    foodPrice,
-    note: cleanString(data.note),
+    foodPrice: Number(rawPrice || 20000),
+    estimatedItemPrice: Number(rawPrice || 20000),
+    note: cleanString(data.note || data.description),
   };
-};
-
-export const extractApiList = (payload) => {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.orders)) return payload.orders;
-  if (Array.isArray(payload?.data?.orders)) return payload.data.orders;
-  if (Array.isArray(payload?.items)) return payload.items;
-  if (Array.isArray(payload?.data?.items)) return payload.data.items;
-  return [];
-};
-
-export const extractApiItem = (payload) => {
-  return payload?.data || payload?.order || payload?.item || payload || null;
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -183,16 +234,18 @@ export const extractApiItem = (payload) => {
 // ─────────────────────────────────────────────────────────────
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 20000,
+  timeout: 30000,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
   },
 });
 
-// ─────────────────────────────────────────────────────────────
-// REQUEST INTERCEPTOR
-// ─────────────────────────────────────────────────────────────
+if (isDev) {
+  console.log("[API CONFIG] BASE_URL:", BASE_URL);
+  console.log("[API CONFIG] SOCKET_URL:", SOCKET_URL);
+}
+
 api.interceptors.request.use(
   async (config) => {
     const token = await getStoredToken();
@@ -202,10 +255,10 @@ api.interceptors.request.use(
     }
 
     if (isDev) {
+      const method = String(config.method || "GET").toUpperCase();
+      const url = `${config.baseURL || ""}${config.url || ""}`;
       console.log(
-        "[API REQUEST]",
-        `${String(config.method || "GET").toUpperCase()} ${config.baseURL}${config.url}`,
-        token ? "TOKEN_OK" : "NO_TOKEN"
+        `[API REQUEST] ${method} ${url} ${token ? "TOKEN_OK" : "NO_TOKEN"}`
       );
     }
 
@@ -214,25 +267,10 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ─────────────────────────────────────────────────────────────
-// RESPONSE INTERCEPTOR
-// ─────────────────────────────────────────────────────────────
 api.interceptors.response.use(
   async (response) => {
     const token = extractTokenFromResponse(response);
-
-    if (token) {
-      await saveTokenEverywhere(token);
-    }
-
-    if (
-      response.data &&
-      typeof response.data === "object" &&
-      !Object.prototype.hasOwnProperty.call(response.data, "success")
-    ) {
-      response.data.success = true;
-    }
-
+    if (token) await saveTokenEverywhere(token);
     return response;
   },
   async (error) => {
@@ -241,7 +279,7 @@ api.interceptors.response.use(
       error?.response?.data?.error ||
       error?.response?.data?.message ||
       error?.message ||
-      "Terjadi kesalahan jaringan.";
+      "API Error";
 
     if (isDev) {
       console.log("[API ERROR]", status || "NO_STATUS", message);
@@ -275,6 +313,9 @@ export const tokenManager = {
 
   key: TOKEN_KEY,
 };
+
+export const getAuthToken = getStoredToken;
+export const getSocketUrl = () => SOCKET_URL;
 
 // ─────────────────────────────────────────────────────────────
 // AUTH API
@@ -375,12 +416,12 @@ export const ordersAPI = {
   getOrders: () => api.get("/orders"),
 
   /**
-   * Alias lama untuk dashboard app/(app)/index.jsx.
+   * Alias lama untuk dashboard.
    */
   getAll: () => api.get("/orders"),
 
   /**
-   * Alias tambahan untuk jaga-jaga file lama.
+   * Alias tambahan.
    */
   list: () => api.get("/orders"),
 
@@ -434,6 +475,13 @@ export const ordersAPI = {
       pickup: payload.pickupLocation,
       destination: payload.dropoffLocation,
 
+      pickupLatitude: payload.pickupLatitude,
+      pickupLongitude: payload.pickupLongitude,
+      destinationLatitude: payload.destinationLatitude,
+      destinationLongitude: payload.destinationLongitude,
+      pickupNote: payload.pickupNote,
+      destinationNote: payload.destinationNote,
+
       estimatedDistanceKm: payload.estimatedDistanceKm,
       estimatedPrice: payload.estimatedPrice,
       note: payload.note || "",
@@ -450,6 +498,14 @@ export const ordersAPI = {
       dropoffAddress: payload.dropoffLocation,
       pickup: payload.pickupLocation,
       destination: payload.dropoffLocation,
+
+      pickupLatitude: payload.pickupLatitude,
+      pickupLongitude: payload.pickupLongitude,
+      destinationLatitude: payload.destinationLatitude,
+      destinationLongitude: payload.destinationLongitude,
+      pickupNote: payload.pickupNote,
+      destinationNote: payload.destinationNote,
+
       estimatedDistanceKm: payload.estimatedDistanceKm,
       estimatedPrice: payload.estimatedPrice,
       note: payload.note || "",
@@ -465,19 +521,32 @@ export const ordersAPI = {
     return api.post("/orders/pol_send", {
       itemName: payload.itemName,
       foodName: payload.foodName,
+      packageName: payload.packageName,
+      goodsName: payload.goodsName,
 
       restaurantName: payload.restaurantName,
 
       pickupLocation: payload.pickupLocation,
       pickupAddress: payload.pickupLocation,
       pickup: payload.pickupLocation,
+      senderLocation: payload.pickupLocation,
 
       dropoffLocation: payload.dropoffLocation,
       dropoffAddress: payload.dropoffLocation,
       destination: payload.dropoffLocation,
+      receiverLocation: payload.dropoffLocation,
 
-      estimatedItemPrice: payload.estimatedItemPrice,
+      pickupLatitude: payload.pickupLatitude,
+      pickupLongitude: payload.pickupLongitude,
+      destinationLatitude: payload.destinationLatitude,
+      destinationLongitude: payload.destinationLongitude,
+      pickupNote: payload.pickupNote,
+      destinationNote: payload.destinationNote,
+
       foodPrice: payload.foodPrice,
+      itemPrice: payload.foodPrice,
+      price: payload.foodPrice,
+      estimatedItemPrice: payload.estimatedItemPrice,
 
       note: payload.note || "",
     });
@@ -489,15 +558,33 @@ export const ordersAPI = {
     return api.post("/orders/pol_send", {
       itemName: payload.itemName,
       foodName: payload.foodName,
+      packageName: payload.packageName,
+      goodsName: payload.goodsName,
+
       restaurantName: payload.restaurantName,
+
       pickupLocation: payload.pickupLocation,
       pickupAddress: payload.pickupLocation,
       pickup: payload.pickupLocation,
+      senderLocation: payload.pickupLocation,
+
       dropoffLocation: payload.dropoffLocation,
       dropoffAddress: payload.dropoffLocation,
       destination: payload.dropoffLocation,
-      estimatedItemPrice: payload.estimatedItemPrice,
+      receiverLocation: payload.dropoffLocation,
+
+      pickupLatitude: payload.pickupLatitude,
+      pickupLongitude: payload.pickupLongitude,
+      destinationLatitude: payload.destinationLatitude,
+      destinationLongitude: payload.destinationLongitude,
+      pickupNote: payload.pickupNote,
+      destinationNote: payload.destinationNote,
+
       foodPrice: payload.foodPrice,
+      itemPrice: payload.foodPrice,
+      price: payload.foodPrice,
+      estimatedItemPrice: payload.estimatedItemPrice,
+
       note: payload.note || "",
     });
   },
@@ -521,6 +608,14 @@ export const ordersAPI = {
         dropoffLocation: payload.dropoffLocation,
         dropoffAddress: payload.dropoffLocation,
         destination: payload.dropoffLocation,
+
+        pickupLatitude: payload.pickupLatitude,
+        pickupLongitude: payload.pickupLongitude,
+        destinationLatitude: payload.destinationLatitude,
+        destinationLongitude: payload.destinationLongitude,
+        pickupNote: payload.pickupNote,
+        destinationNote: payload.destinationNote,
+
         estimatedItemPrice: payload.estimatedItemPrice,
         foodPrice: payload.foodPrice,
         note: payload.note || "",
@@ -536,6 +631,14 @@ export const ordersAPI = {
       dropoffAddress: payload.dropoffLocation,
       pickup: payload.pickupLocation,
       destination: payload.dropoffLocation,
+
+      pickupLatitude: payload.pickupLatitude,
+      pickupLongitude: payload.pickupLongitude,
+      destinationLatitude: payload.destinationLatitude,
+      destinationLongitude: payload.destinationLongitude,
+      pickupNote: payload.pickupNote,
+      destinationNote: payload.destinationNote,
+
       estimatedDistanceKm: payload.estimatedDistanceKm,
       estimatedPrice: payload.estimatedPrice,
       note: payload.note || "",
@@ -552,6 +655,31 @@ export const ordersAPI = {
   completeOrder: (id) => api.post(`/orders/${normalizeId(id)}/complete`),
 
   complete: (id) => api.post(`/orders/${normalizeId(id)}/complete`),
+
+  /**
+   * Manual tracking progress.
+   * status:
+   * - arrived
+   * - picked_up
+   * - on_the_way
+   */
+  updateProgress: (id, status) =>
+    api.post(`/orders/${normalizeId(id)}/progress`, {
+      status,
+      progressStatus: status,
+    }),
+
+  progress: (id, status) =>
+    api.post(`/orders/${normalizeId(id)}/progress`, {
+      status,
+      progressStatus: status,
+    }),
+
+  setProgress: (id, status) =>
+    api.post(`/orders/${normalizeId(id)}/progress`, {
+      status,
+      progressStatus: status,
+    }),
 
   cancelOrder: (id) => api.delete(`/orders/${normalizeId(id)}`),
 
@@ -577,15 +705,14 @@ export const notificationsAPI = {
 // CHAT API
 // ─────────────────────────────────────────────────────────────
 export const chatAPI = {
-  getRooms: () => api.get("/chat/rooms"),
+  /**
+   * Raw axios versions.
+   */
+  getRoomsRaw: () => api.get("/chat/rooms"),
 
-  rooms: () => api.get("/chat/rooms"),
+  getRoomRaw: (roomId) => api.get(`/chat/rooms/${normalizeId(roomId)}`),
 
-  getRoomById: (roomId) => api.get(`/chat/rooms/${normalizeId(roomId)}`),
-
-  getById: (roomId) => api.get(`/chat/rooms/${normalizeId(roomId)}`),
-
-  getMessages: (roomId, cursor = null) =>
+  getMessagesRaw: (roomId, cursor = null) =>
     api.get(`/chat/rooms/${normalizeId(roomId)}/messages`, {
       params: {
         cursor,
@@ -593,29 +720,212 @@ export const chatAPI = {
       },
     }),
 
-  messages: (roomId, cursor = null) =>
-    api.get(`/chat/rooms/${normalizeId(roomId)}/messages`, {
+  /**
+   * Friendly versions untuk screen chat.
+   * Ini return data langsung, bukan axios response.
+   */
+  getRooms: async () => {
+    const response = await api.get("/chat/rooms");
+    return extractApiList(response);
+  },
+
+  rooms: async () => {
+    const response = await api.get("/chat/rooms");
+    return extractApiList(response);
+  },
+
+  getRoomById: async (roomId) => {
+    const response = await api.get(`/chat/rooms/${normalizeId(roomId)}`);
+    return extractApiItem(response);
+  },
+
+  getById: async (roomId) => {
+    const response = await api.get(`/chat/rooms/${normalizeId(roomId)}`);
+    return extractApiItem(response);
+  },
+
+  getMessages: async (roomId, cursor = null) => {
+    const response = await api.get(`/chat/rooms/${normalizeId(roomId)}/messages`, {
       params: {
         cursor,
         limit: 30,
       },
-    }),
+    });
 
-  getOrCreateRoom: (orderId, customerId, driverId) =>
-    api.post("/chat/rooms", {
+    return extractApiItem(response);
+  },
+
+  messages: async (roomId, cursor = null) => {
+    const response = await api.get(`/chat/rooms/${normalizeId(roomId)}/messages`, {
+      params: {
+        cursor,
+        limit: 30,
+      },
+    });
+
+    return extractApiItem(response);
+  },
+
+  getOrCreateRoom: async (orderId, customerId, driverId) => {
+    const response = await api.post("/chat/rooms", {
       orderId,
       customerId,
       driverId,
-    }),
+    });
 
-  createRoom: (orderId, customerId, driverId) =>
-    api.post("/chat/rooms", {
+    return extractApiItem(response);
+  },
+
+  createRoom: async (orderId, customerId, driverId) => {
+    const response = await api.post("/chat/rooms", {
       orderId,
       customerId,
       driverId,
-    }),
+    });
 
-  markRead: (roomId) => api.post(`/chat/rooms/${normalizeId(roomId)}/read`),
+    return extractApiItem(response);
+  },
+
+  markAsRead: async (roomId) => {
+    const response = await api.post(`/chat/rooms/${normalizeId(roomId)}/read`);
+    return extractApiItem(response);
+  },
+
+  read: async (roomId) => {
+    const response = await api.post(`/chat/rooms/${normalizeId(roomId)}/read`);
+    return extractApiItem(response);
+  },
+
+  /**
+   * REST fallback kalau socket gagal.
+   * Backend batch chat sudah disiapkan untuk endpoint ini.
+   */
+  sendMessage: async (roomId, text) => {
+    const response = await api.post(`/chat/rooms/${normalizeId(roomId)}/messages`, {
+      text,
+    });
+
+    return extractApiItem(response);
+  },
 };
 
+// Alias biar file lama yang pakai chatApi tetap aman
+export const chatApi = chatAPI;
+
+// ─────────────────────────────────────────────────────────────
+// AI CHATBOT API
+// ─────────────────────────────────────────────────────────────
+const normalizeAIText = (payload) => {
+  const data = payload?.data ?? payload;
+  const core = data?.data ?? data;
+
+  const geminiText =
+    core?.candidates?.[0]?.content?.parts?.[0]?.text ||
+    core?.candidates?.[0]?.content?.text ||
+    core?.candidates?.[0]?.text ||
+    data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+    data?.candidates?.[0]?.content?.text ||
+    data?.candidates?.[0]?.text;
+
+  const answer =
+    core?.response ||
+    core?.reply ||
+    core?.answer ||
+    core?.message ||
+    core?.text ||
+    core?.result ||
+    core?.content ||
+    data?.response ||
+    data?.reply ||
+    data?.answer ||
+    data?.message ||
+    data?.text ||
+    data?.result ||
+    geminiText;
+
+  if (typeof answer === "string" && answer.trim().length > 0) {
+    return answer.trim();
+  }
+
+  return "";
+};
+
+const buildAIResult = (axiosResponse) => {
+  const raw = axiosResponse?.data ?? {};
+  const core = raw?.data ?? raw;
+  const answer = normalizeAIText(raw);
+
+  if (isDev) {
+    try {
+      console.log("[AI RAW RESPONSE]", JSON.stringify(raw).slice(0, 1500));
+      console.log("[AI NORMALIZED ANSWER]", answer || "EMPTY_ANSWER");
+    } catch {
+      console.log("[AI RAW RESPONSE]", raw);
+    }
+  }
+
+  const safeAnswer =
+    answer ||
+    "Maaf, aku belum bisa menjawab pertanyaan itu.";
+
+  // Return top-level response/answer supaya screen lama yang baca
+  // result.response atau result.answer tetap langsung jalan.
+  return {
+    success: raw?.success ?? Boolean(answer),
+    response: safeAnswer,
+    reply: safeAnswer,
+    answer: safeAnswer,
+    message: safeAnswer,
+    text: safeAnswer,
+    raw,
+    data: {
+      ...core,
+      response: safeAnswer,
+      reply: safeAnswer,
+      answer: safeAnswer,
+      message: safeAnswer,
+      text: safeAnswer,
+    },
+  };
+};
+
+const normalizeAIPrompt = (input) => {
+  if (typeof input === "string") return input.trim();
+
+  return String(
+    input?.prompt ||
+      input?.message ||
+      input?.text ||
+      input?.question ||
+      ""
+  ).trim();
+};
+
+const postAIChat = async (input) => {
+  const prompt = normalizeAIPrompt(input);
+
+  const response = await api.post("/ai/chat", {
+    prompt,
+    message: prompt,
+    text: prompt,
+    question: prompt,
+  });
+
+  return buildAIResult(response);
+};
+
+export const aiAPI = {
+  chat: postAIChat,
+  ask: postAIChat,
+  sendMessage: postAIChat,
+  send: postAIChat,
+};
+
+// Alias cadangan biar file lama tetap aman
+export const chatbotAPI = aiAPI;
+export const aiChatAPI = aiAPI;
+
+// ─────────────────────────────────────────────────────────────
+// DEFAULT EXPORT
+// ─────────────────────────────────────────────────────────────
 export default api;

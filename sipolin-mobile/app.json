@@ -6,16 +6,12 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
+    "scheme": "sipolin",
     "ios": {
-      "supportsTabletOS": true
+      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
@@ -28,9 +24,7 @@
     },
     "plugins": [
       "expo-router",
-      "expo-image",
       "expo-secure-store"
-    ],
-    "scheme": "sipolin"
+    ]
   }
 }

@@ -31,7 +31,7 @@ import Animated, {
   withSpring, withTiming, FadeIn, Easing,
 } from 'react-native-reanimated';
 
-import { usersAPI, ordersAPI } from '../../../../services/api';
+import { usersAPI, ordersAPI, extractApiItem } from '../../../../services/api';
 
 const { width: W, height: H } = Dimensions.get('window');
 
@@ -199,12 +199,13 @@ export default function TrackScreen() {
   // ── Fetch driver location from backend ────────────────────────────────────
   const fetchDriverLocation = useCallback(async (driverId, custCoord) => {
     try {
-      const { data } = await usersAPI.getDriverLocation(driverId);
+      const driverRes = await usersAPI.getDriverLocation(driverId);
+      const data = extractApiItem(driverRes);
 
       lastUpdateRef.current = Date.now();
-      setIsOnline(data.isOnline);
+      setIsOnline(data?.isOnline ?? false);
 
-      if (data.latitude && data.longitude) {
+      if (data?.latitude && data?.longitude) {
         // Update animated marker
         updateDriverPosition(data.latitude, data.longitude);
 
@@ -235,17 +236,42 @@ export default function TrackScreen() {
       try {
         // 1. Fetch order
         const orderRes = await ordersAPI.getById(orderId);
-        const ord      = orderRes.data;
+        const rawOrder = extractApiItem(orderRes);
+        const fixedDriverId = rawOrder?.driverId || rawOrder?.driver?.id;
+
         if (!mounted) return;
-        if (!ord.driverId) {
+
+        if (!rawOrder?.id) {
+          setError('Pesanan tidak ditemukan.');
+          setLoading(false);
+          return;
+        }
+
+        if (!fixedDriverId) {
           setError('Driver belum ditugaskan ke pesanan ini.');
           setLoading(false);
           return;
         }
+
+        const ord = { ...rawOrder, driverId: fixedDriverId };
         setOrder(ord);
 
-        // 2. Get customer's current location (for ETA calculation)
+        // 2. Target coordinate: prefer destination/pickup coordinates from order if later available.
+        // Fallback: current HP location, so old database still works.
         let custCoord = null;
+        const destinationLat = Number(rawOrder?.destinationLatitude ?? rawOrder?.dropoffLatitude);
+        const destinationLng = Number(rawOrder?.destinationLongitude ?? rawOrder?.dropoffLongitude);
+        const pickupLat = Number(rawOrder?.pickupLatitude);
+        const pickupLng = Number(rawOrder?.pickupLongitude);
+
+        if (!Number.isNaN(destinationLat) && !Number.isNaN(destinationLng)) {
+          custCoord = { latitude: destinationLat, longitude: destinationLng };
+          if (mounted) setCustomerCoord(custCoord);
+        } else if (!Number.isNaN(pickupLat) && !Number.isNaN(pickupLng) && rawOrder?.status === 'accepted') {
+          custCoord = { latitude: pickupLat, longitude: pickupLng };
+          if (mounted) setCustomerCoord(custCoord);
+        }
+        if (!custCoord) {
         try {
           const { status } = await Location.requestForegroundPermissionsAsync();
           if (status === 'granted') {
@@ -254,11 +280,12 @@ export default function TrackScreen() {
             if (mounted) setCustomerCoord(custCoord);
           }
         } catch (_) { /* non-fatal */ }
+        }
 
         // 3. First driver location fetch
         const driverRes = await usersAPI.getDriverLocation(ord.driverId);
         if (!mounted) return;
-        const dData = driverRes.data;
+        const dData = extractApiItem(driverRes);
         setDriverInfo(dData);
 
         if (dData.latitude && dData.longitude) {
@@ -334,8 +361,10 @@ export default function TrackScreen() {
   const statusConfig = useMemo(() => {
     const map = {
       pending:    { label: 'Mencari Driver',  color: '#f59e0b', bg: '#fffbeb' },
-      accepted:   { label: 'Driver Menuju',   color: '#2563eb', bg: '#eff6ff' },
-      picked_up:  { label: 'Dalam Perjalanan', color: '#7c3aed', bg: '#f5f3ff' },
+      accepted:   { label: 'Menuju Jemput',   color: '#2563eb', bg: '#eff6ff' },
+      arrived:    { label: 'Driver Sampai',    color: '#7c3aed', bg: '#f5f3ff' },
+      picked_up:  { label: 'Sudah Diambil',    color: '#7c3aed', bg: '#f5f3ff' },
+      on_the_way: { label: 'Menuju Tujuan',    color: '#2563eb', bg: '#eff6ff' },
       completed:  { label: 'Selesai',          color: '#16a34a', bg: '#f0fdf4' },
       cancelled:  { label: 'Dibatalkan',       color: '#dc2626', bg: '#fef2f2' },
     };

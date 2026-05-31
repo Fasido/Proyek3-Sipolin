@@ -75,14 +75,16 @@ export default function PolSendScreen() {
         note: note.trim(),
       });
 
-      if (response.data?.success) {
-        const orderId = response.data.data?.id;
-        Alert.alert("Pesanan Dibuat!", "Driver akan segera ambilkan pesananmu.", [
+      const order = response?.data?.data || response?.data?.order || response?.data || null;
+      const orderId = order?.id;
+
+      if (response.data?.success || orderId) {
+        Alert.alert("Pesanan Dibuat!", "Pesanan masuk dan sedang menunggu driver.", [
           {
-            text: "Lihat Status",
+            text: "Lihat Detail",
             onPress: () =>
               orderId
-                ? router.replace(`/orders/tracking/${orderId}`)
+                ? router.replace(`/orders/${orderId}`)
                 : router.back(),
           },
         ]);
