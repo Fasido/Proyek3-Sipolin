@@ -28,15 +28,22 @@ import {
   Eye,
   EyeOff,
   ArrowLeft,
+  Sparkles,
 } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-const ROYAL_BLUE = '#2563eb';
-const ROYAL_BLUE_DARK = '#1d4ed8';
-const ROYAL_BLUE_LIGHT = '#eff6ff';
-const ROYAL_BLUE_BORDER = '#bfdbfe';
+// ─── Theme Colors - Biru, Kuning, Putih ──────────────────────────────────────
+const PRIMARY_BLUE = '#1E3A8A';      // Biru Tua
+const PRIMARY_BLUE_LIGHT = '#3B82F6'; // Biru Cerah
+const PRIMARY_BLUE_SOFT = '#DBEAFE';  // Biru Soft
+const YELLOW = '#FBBF24';             // Kuning Emas
+const YELLOW_SOFT = '#FEF3C7';        // Kuning Soft
+const WHITE = '#FFFFFF';
+const WHITE_SOFT = '#F9FAFB';
+const DARK = '#1F2937';
+const GRAY = '#6B7280';
+const LIGHT_GRAY = '#E5E7EB';
 
 const DEPARTMENTS = [
   'Teknik Informatika',
@@ -51,7 +58,6 @@ const DEPARTMENTS = [
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-/** Floating-label input with icon */
 const InputField = ({
   label,
   icon: Icon,
@@ -87,18 +93,18 @@ const InputField = ({
 
   const borderColor = focusAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['#e5e7eb', ROYAL_BLUE],
+    outputRange: [LIGHT_GRAY, YELLOW],
   });
 
   const labelColor = focusAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['#6b7280', ROYAL_BLUE],
+    outputRange: [GRAY, PRIMARY_BLUE],
   });
 
-  const iconColor = isFocused ? ROYAL_BLUE : '#9ca3af';
+  const iconColor = isFocused ? YELLOW : GRAY;
 
   return (
-    <View className="mb-4">
+    <View style={{ marginBottom: 16 }}>
       <Animated.Text style={{ color: labelColor, fontSize: 12, fontWeight: '600', marginBottom: 6, letterSpacing: 0.4 }}>
         {label}
       </Animated.Text>
@@ -107,12 +113,12 @@ const InputField = ({
           borderWidth: 1.5,
           borderColor,
           borderRadius: 14,
-          backgroundColor: editable ? '#fff' : '#f9fafb',
+          backgroundColor: editable ? WHITE : WHITE_SOFT,
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: 14,
           paddingVertical: Platform.OS === 'ios' ? 14 : 2,
-          shadowColor: isFocused ? ROYAL_BLUE : 'transparent',
+          shadowColor: isFocused ? YELLOW : 'transparent',
           shadowOpacity: 0.12,
           shadowRadius: 8,
           shadowOffset: { width: 0, height: 2 },
@@ -121,10 +127,9 @@ const InputField = ({
       >
         <Icon size={18} color={iconColor} style={{ marginRight: 10 }} />
         <TextInput
-          className="flex-1 text-gray-800"
-          style={{ fontSize: 15, paddingVertical: 0 }}
+          style={{ flex: 1, fontSize: 15, paddingVertical: 0, color: DARK }}
           placeholder={placeholder}
-          placeholderTextColor="#d1d5db"
+          placeholderTextColor={LIGHT_GRAY}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={secureTextEntry}
@@ -140,7 +145,6 @@ const InputField = ({
   );
 };
 
-/** Password input with show/hide toggle */
 const PasswordField = ({ label, icon, value, onChangeText, placeholder }) => {
   const [show, setShow] = useState(false);
   return (
@@ -154,15 +158,14 @@ const PasswordField = ({ label, icon, value, onChangeText, placeholder }) => {
       rightElement={
         <TouchableOpacity onPress={() => setShow(!show)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           {show
-            ? <EyeOff size={18} color="#9ca3af" />
-            : <Eye size={18} color="#9ca3af" />}
+            ? <EyeOff size={18} color={GRAY} />
+            : <Eye size={18} color={GRAY} />}
         </TouchableOpacity>
       }
     />
   );
 };
 
-/** Role selector card */
 const RoleCard = ({ role, selectedRole, onSelect, icon: Icon, title, subtitle, color }) => {
   const isSelected = selectedRole === role;
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -175,18 +178,21 @@ const RoleCard = ({ role, selectedRole, onSelect, icon: Icon, title, subtitle, c
     onSelect(role);
   };
 
+  const cardColor = role === 'user' ? PRIMARY_BLUE : '#0891b2';
+  const selectedColor = isSelected ? (role === 'user' ? YELLOW : YELLOW) : cardColor;
+
   return (
-    <TouchableOpacity onPress={handlePress} activeOpacity={0.85} className="flex-1">
+    <TouchableOpacity onPress={handlePress} activeOpacity={0.85} style={{ flex: 1 }}>
       <Animated.View
         style={{
           transform: [{ scale: scaleAnim }],
           borderWidth: 2,
-          borderColor: isSelected ? color : '#e5e7eb',
+          borderColor: isSelected ? YELLOW : LIGHT_GRAY,
           borderRadius: 16,
           padding: 16,
-          backgroundColor: isSelected ? `${color}0D` : '#fff',
+          backgroundColor: isSelected ? YELLOW_SOFT : WHITE,
           alignItems: 'center',
-          shadowColor: isSelected ? color : '#000',
+          shadowColor: isSelected ? YELLOW : '#000',
           shadowOpacity: isSelected ? 0.18 : 0.04,
           shadowRadius: isSelected ? 12 : 4,
           shadowOffset: { width: 0, height: 4 },
@@ -198,18 +204,18 @@ const RoleCard = ({ role, selectedRole, onSelect, icon: Icon, title, subtitle, c
             width: 48,
             height: 48,
             borderRadius: 14,
-            backgroundColor: isSelected ? color : '#f3f4f6',
+            backgroundColor: isSelected ? YELLOW : '#f3f4f6',
             justifyContent: 'center',
             alignItems: 'center',
             marginBottom: 10,
           }}
         >
-          <Icon size={24} color={isSelected ? '#fff' : '#9ca3af'} />
+          <Icon size={24} color={isSelected ? PRIMARY_BLUE : GRAY} />
         </View>
-        <Text style={{ fontSize: 13, fontWeight: '700', color: isSelected ? color : '#374151', marginBottom: 2 }}>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: isSelected ? PRIMARY_BLUE : DARK, marginBottom: 2 }}>
           {title}
         </Text>
-        <Text style={{ fontSize: 11, color: isSelected ? color : '#9ca3af', textAlign: 'center', opacity: 0.85 }}>
+        <Text style={{ fontSize: 11, color: isSelected ? PRIMARY_BLUE : GRAY, textAlign: 'center', opacity: 0.85 }}>
           {subtitle}
         </Text>
         {isSelected && (
@@ -221,12 +227,12 @@ const RoleCard = ({ role, selectedRole, onSelect, icon: Icon, title, subtitle, c
               width: 18,
               height: 18,
               borderRadius: 9,
-              backgroundColor: color,
+              backgroundColor: YELLOW,
               justifyContent: 'center',
               alignItems: 'center',
             }}
           >
-            <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>✓</Text>
+            <Text style={{ color: PRIMARY_BLUE, fontSize: 11, fontWeight: '800' }}>✓</Text>
           </View>
         )}
       </Animated.View>
@@ -239,7 +245,6 @@ export default function RegisterScreen() {
   const { signUp } = useAuth();
   const router = useRouter();
 
-  // ── Form state
   const [name, setName] = useState('');
   const [nim, setNim] = useState('');
   const [email, setEmail] = useState('');
@@ -247,17 +252,14 @@ export default function RegisterScreen() {
   const [department, setDepartment] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState('user'); // 'user' | 'driver'
+  const [role, setRole] = useState('user');
   const [platNomor, setPlatNomor] = useState('');
   const [jenisMotor, setJenisMotor] = useState('');
   const [showDeptPicker, setShowDeptPicker] = useState(false);
-
-  // ── UI state
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [globalError, setGlobalError] = useState('');
 
-  // ── Animated height for driver section
   const driverSectionHeight = useRef(new Animated.Value(0)).current;
   const driverSectionOpacity = useRef(new Animated.Value(0)).current;
 
@@ -277,7 +279,6 @@ export default function RegisterScreen() {
     ]).start();
   }, [role]);
 
-  // ── Validation
   const validate = () => {
     const newErrors = {};
     if (!name.trim()) newErrors.name = 'Nama lengkap wajib diisi';
@@ -298,15 +299,12 @@ export default function RegisterScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ── Submit
   const handleRegister = async () => {
     setGlobalError('');
     if (!validate()) return;
 
     setIsLoading(true);
     try {
-      // 1. Siapkan data kendaraan (kalau driver)
-      // Karena api.js minta 8 parameter kepisah, kita pecah vehiclenya
       let platInfo = null;
       let motorInfo = null;
       
@@ -315,106 +313,98 @@ export default function RegisterScreen() {
         motorInfo = jenisMotor;
       }
 
-      // 2. Tembak ke AuthContext (perhatikan parameternya sekarang 8)
-      // signUp(email, password, name, nim, phone, role, plateNumber, vehicleDetail)
       const result = await signUp(email, password, name, nim, phone, role, platInfo, motorInfo);
 
       if (!result.success) {
         setGlobalError(result.error || 'Pendaftaran gagal. Coba lagi.');
       } else {
-        // 3. JIKA SUKSES, OTOMATIS LOGIN & MASUK KE HOME
-        // Karena sistem AuthContext biasanya pakai token JWT
-        // Memanggil signUp sudah cukup (jika backend mereturn token dan login otomatis)
-        // ATAU kita paksa pindah ke root '/'
-        router.replace('/'); 
+        router.replace('/');
       }
     } catch (error) {
-       setGlobalError('Terjadi kesalahan jaringan.');
+      setGlobalError('Terjadi kesalahan jaringan.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ── Department picker helper
   const driverMaxHeight = driverSectionHeight.interpolate({
     inputRange: [0, 1],
     outputRange: [0, 220],
   });
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: WHITE }} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle="dark-content" backgroundColor={WHITE} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
+        style={{ flex: 1 }}
       >
         <ScrollView
-          className="flex-1"
+          style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* ── Header */}
-          <View style={{ paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8 }}>
+          {/* Header with Blue Background */}
+          <View style={{ backgroundColor: PRIMARY_BLUE, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}>
             <TouchableOpacity
               onPress={() => router.back()}
-              className="flex-row items-center mb-6"
+              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <ArrowLeft size={20} color={ROYAL_BLUE} />
-              <Text style={{ color: ROYAL_BLUE, marginLeft: 6, fontSize: 14, fontWeight: '600' }}>
+              <ArrowLeft size={20} color={WHITE} />
+              <Text style={{ color: WHITE, marginLeft: 6, fontSize: 14, fontWeight: '600' }}>
                 Kembali
               </Text>
             </TouchableOpacity>
 
-            {/* Logo / Brand mark */}
-            <View className="flex-row items-center mb-2">
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
               <View
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  backgroundColor: ROYAL_BLUE,
+                  width: 50,
+                  height: 50,
+                  borderRadius: 15,
+                  backgroundColor: YELLOW,
                   justifyContent: 'center',
                   alignItems: 'center',
                   marginRight: 12,
-                  shadowColor: ROYAL_BLUE,
-                  shadowOpacity: 0.35,
-                  shadowRadius: 10,
+                  shadowColor: YELLOW,
+                  shadowOpacity: 0.5,
+                  shadowRadius: 12,
                   shadowOffset: { width: 0, height: 4 },
-                  elevation: 6,
+                  elevation: 8,
                 }}
               >
-                <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>S</Text>
+                <Sparkles size={28} color={PRIMARY_BLUE} />
               </View>
-              <Text style={{ fontSize: 22, fontWeight: '900', color: '#111827', letterSpacing: -0.5 }}>
+              <Text style={{ fontSize: 26, fontWeight: '900', color: WHITE, letterSpacing: -0.5 }}>
                 SIPOLIN
               </Text>
             </View>
 
-            <Text style={{ fontSize: 28, fontWeight: '800', color: '#111827', letterSpacing: -0.8, marginBottom: 4 }}>
+            <Text style={{ fontSize: 28, fontWeight: '800', color: WHITE, letterSpacing: -0.8, marginBottom: 8 }}>
               Buat Akun Baru
             </Text>
-            <Text style={{ fontSize: 14, color: '#6b7280', lineHeight: 20 }}>
-              Daftarkan diri kamu untuk mulai menggunakan layanan Sipolin.
+            <Text style={{ fontSize: 14, color: YELLOW_SOFT, lineHeight: 20 }}>
+              Daftarkan diri kamu untuk mulai menggunakan layanan Sipolin
             </Text>
           </View>
 
-          <View style={{ paddingHorizontal: 24, paddingTop: 20 }}>
+          <View style={{ paddingHorizontal: 24, paddingTop: 24 }}>
 
-            {/* ── Role Selector */}
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#6b7280', marginBottom: 10, letterSpacing: 0.6, textTransform: 'uppercase' }}>
-              Daftar sebagai
+            {/* Role Selector */}
+            <Text style={{ fontSize: 12, fontWeight: '700', color: PRIMARY_BLUE, marginBottom: 12, letterSpacing: 0.6 }}>
+              DAFTAR SEBAGAI
             </Text>
-            <View className="flex-row gap-3 mb-6" style={{ gap: 12 }}>
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
               <RoleCard
                 role="user"
                 selectedRole={role}
                 onSelect={setRole}
                 icon={GraduationCap}
                 title="Mahasiswa"
-                subtitle="Pesan layanan antar & tebengan"
-                color={ROYAL_BLUE}
+                subtitle="Pesan layanan antar"
+                color={PRIMARY_BLUE}
               />
               <RoleCard
                 role="driver"
@@ -427,35 +417,34 @@ export default function RegisterScreen() {
               />
             </View>
 
-            {/* ── Divider with section label */}
-            <View className="flex-row items-center mb-5">
-              <View className="flex-1 h-px bg-gray-100" />
-              <Text style={{ marginHorizontal: 12, fontSize: 11, fontWeight: '700', color: '#9ca3af', letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                Data Diri
+            {/* Data Diri Section */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+              <View style={{ flex: 1, height: 1.5, backgroundColor: YELLOW_SOFT }} />
+              <Text style={{ marginHorizontal: 12, fontSize: 11, fontWeight: '700', color: PRIMARY_BLUE, letterSpacing: 0.5 }}>
+                DATA DIRI
               </Text>
-              <View className="flex-1 h-px bg-gray-100" />
+              <View style={{ flex: 1, height: 1.5, backgroundColor: YELLOW_SOFT }} />
             </View>
 
-            {/* ── Common Fields */}
             <InputField
               label="Nama Lengkap"
               icon={User}
               value={name}
               onChangeText={(t) => { setName(t); setErrors(e => ({ ...e, name: '' })); }}
-              placeholder="Contoh: Budi Santoso"
+              placeholder="Budi Santoso"
               autoCapitalize="words"
             />
-            {errors.name ? <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -12, marginBottom: 8 }}>{errors.name}</Text> : null}
+            {errors.name && <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -12, marginBottom: 8 }}>{errors.name}</Text>}
 
             <InputField
-              label="NIM (Nomor Induk Mahasiswa)"
+              label="NIM"
               icon={Hash}
               value={nim}
               onChangeText={(t) => { setNim(t); setErrors(e => ({ ...e, nim: '' })); }}
-              placeholder="Contoh: 2021310001"
+              placeholder="2021310001"
               keyboardType="number-pad"
             />
-            {errors.nim ? <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -12, marginBottom: 8 }}>{errors.nim}</Text> : null}
+            {errors.nim && <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -12, marginBottom: 8 }}>{errors.nim}</Text>}
 
             <InputField
               label="Email Kampus"
@@ -465,61 +454,60 @@ export default function RegisterScreen() {
               placeholder="nim@mahasiswa.univ.ac.id"
               keyboardType="email-address"
             />
-            {errors.email ? <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -12, marginBottom: 8 }}>{errors.email}</Text> : null}
+            {errors.email && <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -12, marginBottom: 8 }}>{errors.email}</Text>}
 
             <InputField
-              label="Nomor HP (WhatsApp)"
+              label="Nomor HP"
               icon={Phone}
               value={phone}
               onChangeText={(t) => { setPhone(t); setErrors(e => ({ ...e, phone: '' })); }}
               placeholder="08xxxxxxxxxx"
               keyboardType="phone-pad"
             />
-            {errors.phone ? <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -12, marginBottom: 8 }}>{errors.phone}</Text> : null}
+            {errors.phone && <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -12, marginBottom: 8 }}>{errors.phone}</Text>}
 
             {/* Department picker */}
-            <View className="mb-4">
-              <Text style={{ fontSize: 12, fontWeight: '600', color: '#6b7280', marginBottom: 6, letterSpacing: 0.4 }}>
-                Program Studi / Jurusan
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: GRAY, marginBottom: 6, letterSpacing: 0.4 }}>
+                Program Studi
               </Text>
               <TouchableOpacity
                 onPress={() => setShowDeptPicker(!showDeptPicker)}
                 style={{
                   borderWidth: 1.5,
-                  borderColor: showDeptPicker ? ROYAL_BLUE : '#e5e7eb',
+                  borderColor: showDeptPicker ? YELLOW : LIGHT_GRAY,
                   borderRadius: 14,
-                  backgroundColor: '#fff',
+                  backgroundColor: WHITE,
                   flexDirection: 'row',
                   alignItems: 'center',
                   paddingHorizontal: 14,
                   paddingVertical: 14,
                 }}
               >
-                <BookOpen size={18} color={showDeptPicker ? ROYAL_BLUE : '#9ca3af'} style={{ marginRight: 10 }} />
+                <BookOpen size={18} color={showDeptPicker ? YELLOW : GRAY} style={{ marginRight: 10 }} />
                 <Text style={{
                   flex: 1,
                   fontSize: 15,
-                  color: department ? '#1f2937' : '#d1d5db',
+                  color: department ? DARK : LIGHT_GRAY,
                 }}>
                   {department || 'Pilih program studi'}
                 </Text>
                 <ChevronRight
                   size={16}
-                  color="#9ca3af"
-                  style={{ transform: [{ rotate: showDeptPicker ? '90deg' : '0deg' }] }}
+                  color={GRAY}
                 />
               </TouchableOpacity>
 
               {showDeptPicker && (
                 <View
                   style={{
-                    borderWidth: 1.5,
-                    borderColor: ROYAL_BLUE_BORDER,
+                    borderWidth: 1,
+                    borderColor: YELLOW_SOFT,
                     borderRadius: 14,
-                    backgroundColor: '#fff',
-                    marginTop: 6,
+                    backgroundColor: WHITE,
+                    marginTop: 8,
                     overflow: 'hidden',
-                    shadowColor: ROYAL_BLUE,
+                    shadowColor: PRIMARY_BLUE,
                     shadowOpacity: 0.1,
                     shadowRadius: 12,
                     elevation: 4,
@@ -538,12 +526,12 @@ export default function RegisterScreen() {
                         paddingVertical: 13,
                         borderBottomWidth: idx < DEPARTMENTS.length - 1 ? 1 : 0,
                         borderBottomColor: '#f3f4f6',
-                        backgroundColor: department === dept ? ROYAL_BLUE_LIGHT : '#fff',
+                        backgroundColor: department === dept ? YELLOW_SOFT : WHITE,
                       }}
                     >
                       <Text style={{
                         fontSize: 14,
-                        color: department === dept ? ROYAL_BLUE : '#374151',
+                        color: department === dept ? PRIMARY_BLUE : DARK,
                         fontWeight: department === dept ? '700' : '400',
                       }}>
                         {dept}
@@ -553,15 +541,15 @@ export default function RegisterScreen() {
                 </View>
               )}
             </View>
-            {errors.department ? <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -8, marginBottom: 8 }}>{errors.department}</Text> : null}
+            {errors.department && <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -8, marginBottom: 8 }}>{errors.department}</Text>}
 
-            {/* ── Password Fields */}
-            <View className="flex-row items-center mb-5 mt-1">
-              <View className="flex-1 h-px bg-gray-100" />
-              <Text style={{ marginHorizontal: 12, fontSize: 11, fontWeight: '700', color: '#9ca3af', letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                Keamanan Akun
+            {/* Keamanan Akun */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20, marginTop: 8 }}>
+              <View style={{ flex: 1, height: 1.5, backgroundColor: YELLOW_SOFT }} />
+              <Text style={{ marginHorizontal: 12, fontSize: 11, fontWeight: '700', color: PRIMARY_BLUE, letterSpacing: 0.5 }}>
+                KEAMANAN AKUN
               </Text>
-              <View className="flex-1 h-px bg-gray-100" />
+              <View style={{ flex: 1, height: 1.5, backgroundColor: YELLOW_SOFT }} />
             </View>
 
             <PasswordField
@@ -571,18 +559,18 @@ export default function RegisterScreen() {
               onChangeText={(t) => { setPassword(t); setErrors(e => ({ ...e, password: '' })); }}
               placeholder="Minimal 6 karakter"
             />
-            {errors.password ? <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -12, marginBottom: 8 }}>{errors.password}</Text> : null}
+            {errors.password && <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -12, marginBottom: 8 }}>{errors.password}</Text>}
 
             <PasswordField
               label="Konfirmasi Password"
               icon={ShieldCheck}
               value={confirmPassword}
               onChangeText={(t) => { setConfirmPassword(t); setErrors(e => ({ ...e, confirmPassword: '' })); }}
-              placeholder="Ulangi password kamu"
+              placeholder="Ulangi password"
             />
-            {errors.confirmPassword ? <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -12, marginBottom: 8 }}>{errors.confirmPassword}</Text> : null}
+            {errors.confirmPassword && <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -12, marginBottom: 8 }}>{errors.confirmPassword}</Text>}
 
-            {/* ── Driver-only fields (Animated) */}
+            {/* Driver-only fields */}
             <Animated.View
               style={{
                 maxHeight: driverMaxHeight,
@@ -590,52 +578,51 @@ export default function RegisterScreen() {
                 overflow: 'hidden',
               }}
             >
-              {/* Driver section header */}
               <View
                 style={{
                   borderRadius: 16,
-                  backgroundColor: '#ecfeff',
+                  backgroundColor: YELLOW_SOFT,
                   borderWidth: 1.5,
-                  borderColor: '#a5f3fc',
+                  borderColor: YELLOW,
                   padding: 14,
                   marginBottom: 16,
                   flexDirection: 'row',
                   alignItems: 'center',
                 }}
               >
-                <Bike size={20} color="#0891b2" style={{ marginRight: 10 }} />
+                <Bike size={20} color={YELLOW} style={{ marginRight: 10 }} />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0e7490' }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: PRIMARY_BLUE }}>
                     Info Kendaraan
                   </Text>
-                  <Text style={{ fontSize: 11, color: '#06b6d4', marginTop: 1 }}>
+                  <Text style={{ fontSize: 11, color: PRIMARY_BLUE_LIGHT, marginTop: 1 }}>
                     Wajib diisi untuk verifikasi mitra driver
                   </Text>
                 </View>
               </View>
 
               <InputField
-                label="Plat Nomor Kendaraan"
+                label="Plat Nomor"
                 icon={Car}
                 value={platNomor}
                 onChangeText={(t) => { setPlatNomor(t.toUpperCase()); setErrors(e => ({ ...e, platNomor: '' })); }}
-                placeholder="Contoh: B 1234 ABC"
+                placeholder="B 1234 ABC"
                 autoCapitalize="characters"
               />
-              {errors.platNomor ? <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -12, marginBottom: 8 }}>{errors.platNomor}</Text> : null}
+              {errors.platNomor && <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -12, marginBottom: 8 }}>{errors.platNomor}</Text>}
 
               <InputField
                 label="Jenis & Warna Motor"
                 icon={Bike}
                 value={jenisMotor}
                 onChangeText={(t) => { setJenisMotor(t); setErrors(e => ({ ...e, jenisMotor: '' })); }}
-                placeholder="Contoh: Honda Beat, Merah"
+                placeholder="Honda Beat, Merah"
                 autoCapitalize="words"
               />
-              {errors.jenisMotor ? <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -12, marginBottom: 8 }}>{errors.jenisMotor}</Text> : null}
+              {errors.jenisMotor && <Text style={{ color: '#ef4444', fontSize: 12, marginTop: -12, marginBottom: 8 }}>{errors.jenisMotor}</Text>}
             </Animated.View>
 
-            {/* ── Global Error */}
+            {/* Global Error */}
             {globalError ? (
               <View
                 style={{
@@ -649,26 +636,26 @@ export default function RegisterScreen() {
                   alignItems: 'center',
                 }}
               >
-                <Text style={{ color: '#b91c1c', fontSize: 13, flex: 1, lineHeight: 18 }}>
-                  ⚠️  {globalError}
+                <Text style={{ color: '#b91c1c', fontSize: 13, flex: 1 }}>
+                  ⚠️ {globalError}
                 </Text>
               </View>
             ) : null}
 
-            {/* ── Submit Button */}
+            {/* Submit Button */}
             <TouchableOpacity
               onPress={handleRegister}
               disabled={isLoading}
               activeOpacity={0.88}
               style={{
-                backgroundColor: isLoading ? '#93c5fd' : ROYAL_BLUE,
+                backgroundColor: isLoading ? LIGHT_GRAY : YELLOW,
                 borderRadius: 16,
                 paddingVertical: 17,
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
                 marginTop: 8,
-                shadowColor: ROYAL_BLUE,
+                shadowColor: YELLOW,
                 shadowOpacity: isLoading ? 0 : 0.4,
                 shadowRadius: 14,
                 shadowOffset: { width: 0, height: 6 },
@@ -676,22 +663,22 @@ export default function RegisterScreen() {
               }}
             >
               {isLoading ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={PRIMARY_BLUE} />
               ) : (
                 <>
-                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: 0.2, marginRight: 8 }}>
-                    Daftar Sekarang
+                  <Text style={{ color: PRIMARY_BLUE, fontSize: 16, fontWeight: '800', letterSpacing: 0.2, marginRight: 8 }}>
+                    DAFTAR SEKARANG
                   </Text>
-                  <ChevronRight size={20} color="#fff" />
+                  <ChevronRight size={20} color={PRIMARY_BLUE} />
                 </>
               )}
             </TouchableOpacity>
 
-            {/* ── Footer link */}
-            <View className="flex-row justify-center items-center mt-5 mb-2">
-              <Text style={{ color: '#9ca3af', fontSize: 14 }}>Sudah punya akun? </Text>
+            {/* Footer */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 20, marginBottom: 16 }}>
+              <Text style={{ color: GRAY, fontSize: 14 }}>Sudah punya akun? </Text>
               <TouchableOpacity onPress={() => router.push('/login')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={{ color: ROYAL_BLUE, fontSize: 14, fontWeight: '700' }}>Masuk</Text>
+                <Text style={{ color: PRIMARY_BLUE, fontSize: 14, fontWeight: '700' }}>Masuk</Text>
               </TouchableOpacity>
             </View>
 

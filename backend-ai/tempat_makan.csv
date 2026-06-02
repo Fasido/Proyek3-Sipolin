@@ -1,11 +1,36 @@
-id,nama_tempat,kategori,menu,lokasi,rating
-1,Seblak Jeletot,pedas,Seblak Mercon,Bandung,4.7
-2,Sweet Dessert,manis,Chocolate Ice Cream,Jakarta,4.8
-3,Warteg Bahari,makanan berat,Ayam Goreng,Cirebon,4.5
-4,Mie Gacoan,pedas,Mie Level 8,Bandung,4.6
-5,Kopi Kenangan,manis,Kopi Gula Aren,Jakarta,4.4
-6,Pecel Lele Lela,makanan berat,Pecel Lele + Nasi,Tangerang,4.7
-7,Es Dawet Ayu,minuman,Es Dawet,Cirebon,4.5
-8,Bakso Pak Man,makanan berat,Bakso Urat,Solo,4.9
-9,Martabak Manis,dessert,Martabak Coklat Kacang,Bandung,4.8
-10,Thai Tea House,minuman,Thai Tea Original,Jakarta,4.6
+id,nama_tempat,kategori,sub_kategori,menu,lokasi,rating
+1,Seblak Jeletot,pedas,berkuah,Seblak Mercon,Bandung,4.7
+2,Sweet Dessert,manis,kering,Chocolate Ice Cream,Jakarta,4.8
+3,Warteg Bahari,asin,berkuah,Ayam Goreng,Cirebon,4.5
+4,Mie Gacoan,pedas,berkuah,Mie Level 8,Bandung,4.6
+5,Kopi Kenangan,minuman,minuman_dingin,Kopi Gula Aren,Jakarta,4.4
+6,Pecel Lele Lela,asin,goreng,Pecel Lele + Nasi,Tangerang,4.7
+7,Es Dawet Ayu,minuman,minuman_dingin,Es Dawet,Cirebon,4.5
+8,Bakso Pak Man,asin,berkuah,Bakso Urat,Solo,4.9
+9,Martabak Manis,dessert,goreng,Martabak Coklat Kacang,Bandung,4.8
+10,Thai Tea House,minuman,minuman_dingin,Thai Tea Original,Jakarta,4.6
+11,Ayam Geprek Juara,pedas,goreng,Ayam Geprek Level 5,Yogyakarta,4.8
+12,Ceker Setan,pedas,berkuah,Ceker Pedas Mercon,Surabaya,4.6
+13,Es Krim Nusantara,manis,minuman_dingin,Es Krim Durian,Malang,4.7
+14,Brownies Lumer,manis,kering,Brownies Coklat Lumer,Bandung,4.8
+15,Soto Lamongan,asin,berkuah,Soto Ayam Lamongan,Surabaya,4.7
+16,Nasi Padang Sederhana,asin,berkuah,Rendang + Nasi,Jakarta,4.9
+17,Wedang Jahe,minuman,minuman_hangat,Wedang Jahe Asli,Bandung,4.5
+18,Janji Jiwa,minuman,minuman_dingin,Kopi Susu Jiwa,Jakarta,4.7
+19,Es Cendol,minuman,minuman_dingin,Es Cendol Dawet,Bandung,4.8
+20,Bubble Tea House,minuman,minuman_dingin,Bubble Tea Taro,Jakarta,4.6
+21,Es Jeruk Peras,minuman,minuman_dingin,Es Jeruk Asli,Bandung,4.7
+22,Es Kelapa Muda,minuman,minuman_dingin,Es Kelapa + Sirup,Surabaya,4.5
+23,Soda Gembira,minuman,minuman_dingin,Soda + Susu + Sirup,Jakarta,4.6
+24,Frappe Coffee,minuman,minuman_dingin,Frappe Caramel,Bandung,4.8
+25,Smoothie Bowl,minuman,minuman_dingin,Smoothie Mangga,Jakarta,4.7
+26,Bandrek,minuman,minuman_hangat,Bandrek Jahe Susu,Bandung,4.7
+27,Secang Hangat,minuman,minuman_hangat,Secang Jahe,Yogyakarta,4.5
+28,Kopi Kapal Api,minuman,minuman_hangat,Kopi Hitam Panas,Bandung,4.3
+29,Teh Tawar Hangat,minuman,minuman_hangat,Teh Tawar + Jahe,Jakarta,4.4
+30,Coklat Panas,minuman,minuman_hangat,Coklat Susu Panas,Bandung,4.6
+31,Bakwan Kriuk,asin,goreng,Bakwan Sayur,Jakarta,4.6
+32,Rawon Surabaya,asin,berkuah,Rawon Daging,Surabaya,4.8
+33,Tahu Walik,asin,goreng,Tahu Walik Isi Ayam,Surabaya,4.7
+34,Sop Buntut,asin,berkuah,Sop Buntut Sapi,Jakarta,4.9
+35,Keripik Pedas,pedas,goreng,Keripik Singkong Pedas,Bandung,4.5

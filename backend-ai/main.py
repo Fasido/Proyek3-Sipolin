@@ -1,5 +1,5 @@
 import csv
-
+import re
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -94,6 +94,7 @@ Gaya jawaban:
 - Kalau user bingung memilih fitur, bantu rekomendasikan fitur yang paling cocok.
 - Jangan mengarang data driver, harga, status pesanan, atau data database kalau tidak dikasih.
 """
+
 CSV_FILE = "tempat_makan.csv"
 
 def detect_intent(prompt: str) -> str:
@@ -188,13 +189,17 @@ def load_tempat_makan():
             reader = csv.DictReader(file)
 
             for row in reader:
+                # Tambahkan sub_kategori dengan default kosong jika tidak ada
+                sub_kategori = row.get("sub_kategori", "")
+                
                 data.append({
                     "id": row["id"],
                     "nama_tempat": row["nama_tempat"],
                     "kategori": row["kategori"],
+                    "sub_kategori": sub_kategori,
                     "menu": row["menu"],
                     "lokasi": row["lokasi"],
-                    "rating": row["rating"]
+                    "rating": float(row["rating"])
                 })
 
     except Exception as e:
@@ -202,34 +207,287 @@ def load_tempat_makan():
 
     return data
 
-def rekomendasi_makanan(prompt: str):
+def detect_kategori_from_prompt(prompt: str) -> Optional[str]:
+    """Deteksi kategori makanan dari prompt dengan lebih fleksibel"""
     prompt = prompt.lower()
-
-    data = load_tempat_makan()
-
-    kategori_map = {
+    
+    # DETEKSI MINUMAN - DIPERKUAT BANGET!
+    minuman_keywords = [
+        "minuman", "minum", "haus", "ngopi", "kopi", "teh", "jus",
+        "es", "segar", "seger", "dingin", "hangat", "panas",
+        "es teh", "es kopi", "soda", "air putih", "air mineral",
+        "boba", "thai tea", "matcha", "cincau", "wedang", "bandrek",
+        "secang", "jahe", "smoothie", "milkshake", "frappe",
+        "lega", "dahaga", "butuh minum", "haus banget",
+        "minuman dingin", "minuman hangat", "minuman segar",
+        "dingin dingin", "dingin-dingin"
+    ]
+    
+    # Mapping kata kunci ke kategori
+    kategori_mapping = {
+        # Pedas
         "pedas": "pedas",
+        "pedes": "pedas",
+        "spicy": "pedas",
+        "cabe": "pedas",
+        "sambal": "pedas",
+        "geprek": "pedas",
+        "mercon": "pedas",
+        
+        # Manis
         "manis": "manis",
+        "sweet": "manis",
+        "gula": "manis",
+        "coklat": "manis",
+        "chocolate": "manis",
+        
+        # Asin / Gurih
+        "asin": "asin",
+        "gurih": "asin",
+        "sedap": "asin",
+        "savory": "asin",
+        "umami": "asin",
+        
+        # Dessert
         "dessert": "dessert",
-        "minuman": "minuman",
-        "makanan berat": "makanan berat"
+        "cemilan manis": "dessert",
+        "kue": "dessert",
+        "cake": "dessert",
+        
+        # Makanan berat
+        "lapar": "asin",
+        "kenyang": "asin",
+        "nasi": "asin",
+        "bakso": "asin",
+        "soto": "asin",
+        "rendang": "asin"
     }
-
-    kategori_ditemukan = None
-
-    for keyword, kategori in kategori_map.items():
+    
+    # Cek minuman dulu (prioritas tinggi)
+    for keyword in minuman_keywords:
         if keyword in prompt:
-            kategori_ditemukan = kategori
-            break
+            print(f"[DEBUG] Keyword minuman terdeteksi: '{keyword}'")
+            return "minuman"
+    
+    # Cek kategori lain
+    for keyword, kategori in kategori_mapping.items():
+        if keyword in prompt:
+            print(f"[DEBUG] Keyword '{keyword}' terdeteksi -> kategori '{kategori}'")
+            return kategori
+    
+    return None
 
-    if not kategori_ditemukan:
+def detect_subkategori_from_prompt(prompt: str) -> Optional[str]:
+    """Deteksi subkategori (berkuah/goreng/dingin/hangat) dari prompt - LEBIH FLEKSIBEL"""
+    prompt = prompt.lower()
+    
+    # DETEKSI MINUMAN DINGIN - DIPERKUAT!
+    minuman_dingin_keywords = [
+        # Kata dasar
+        "dingin", "dingin-dingin", "dingin dingin", "dinginin",
+        "es", "cold", "ice", 
+        "segar", "seger", "segerrr", "segar-segar", "nyegerin",
+        "dinginnya", "kedinginan",
+        
+        # Minuman spesifik dingin
+        "es teh", "es kopi", "es jeruk", "es kelapa", "es campur",
+        "es cendol", "es dawet", "es krim", "milkshake", "smoothie",
+        "boba", "bubble tea", "ice tea", "ice coffee", "frappe",
+        "thai tea", "matcha dingin", "jus dingin", "soda dingin",
+        
+        # Frasa umum
+        "yang dingin", "minuman dingin", "dinginnya", "bikin seger",
+        "pendingin", "pelepas dahaga", "haus banget", "lagi haus"
+    ]
+    
+    # DETEKSI MINUMAN HANGAT - DIPERKUAT!
+    minuman_hangat_keywords = [
+        "hangat", "panas", "hot", "warm", "anget",
+        "wedang", "bandrek", "secang", "jahe", "teh hangat",
+        "kopi panas", "kopi hitam", "teh panas", "susu hangat",
+        "coklat panas", "hot chocolate", "chocolate panas",
+        "yang hangat", "minuman hangat", "angetan", "penghangat",
+        "cuaca dingin", "hujan", "dingin-dingin hangat"
+    ]
+    
+    # DETEKSI BERKUAH
+    berkuah_keywords = [
+        "berkuah", "kuah", "berempah", "soto", "bakso", "rawon",
+        "seblak", "mie rebus", "sop", "berkuahnya", "berkuah kental",
+        "berempah", "berkaldu"
+    ]
+    
+    # DETEKSI GORENG/KERING
+    goreng_keywords = [
+        "goreng", "kering", "crispy", "renyah", "kriuk", "keripik",
+        "geprek", "bakwan", "gorengan", "keringnya", "renyahnya",
+        "kriuk kriuk", "kriuk-kriuk"
+    ]
+    
+    # Cek minuman dingin (prioritas tinggi)
+    for keyword in minuman_dingin_keywords:
+        if keyword in prompt:
+            print(f"[DEBUG] Keyword minuman dingin terdeteksi: '{keyword}'")
+            return "minuman_dingin"
+    
+    # Cek minuman hangat
+    for keyword in minuman_hangat_keywords:
+        if keyword in prompt:
+            print(f"[DEBUG] Keyword minuman hangat terdeteksi: '{keyword}'")
+            return "minuman_hangat"
+    
+    # Cek makanan berkuah
+    for keyword in berkuah_keywords:
+        if keyword in prompt:
+            print(f"[DEBUG] Keyword berkuah terdeteksi: '{keyword}'")
+            return "berkuah"
+    
+    # Cek makanan goreng
+    for keyword in goreng_keywords:
+        if keyword in prompt:
+            print(f"[DEBUG] Keyword goreng terdeteksi: '{keyword}'")
+            return "goreng"
+    
+    return None
+
+def rekomendasi_makanan(prompt: str):
+    """Rekomendasi makanan dengan filter subkategori - LEBIH FLEKSIBEL"""
+    kategori = detect_kategori_from_prompt(prompt)
+    sub_kategori = detect_subkategori_from_prompt(prompt)
+    
+    print(f"[DEBUG] Detected: kategori={kategori}, sub_kategori={sub_kategori}")
+    
+    if not kategori:
         return None
-
-    return [
+    
+    data = load_tempat_makan()
+    
+    # Log semua data minuman untuk debugging
+    if kategori == "minuman":
+        minuman_data = [item for item in data if item["kategori"] == "minuman"]
+        print(f"[DEBUG] Total minuman di database: {len(minuman_data)}")
+        for m in minuman_data:
+            print(f"   - {m['nama_tempat']} ({m['sub_kategori']})")
+    
+    # Filter berdasarkan kategori
+    hasil = [
         item
         for item in data
-        if item["kategori"].lower() == kategori_ditemukan
+        if item["kategori"] == kategori
     ]
+    
+    print(f"[DEBUG] Setelah filter kategori: {len(hasil)} item")
+    
+    # Filter berdasarkan subkategori jika ada DAN jika hasil tidak kosong
+    if sub_kategori and hasil:
+        hasil_sub = [
+            item
+            for item in hasil
+            if item["sub_kategori"] == sub_kategori
+        ]
+        if hasil_sub:
+            hasil = hasil_sub
+            print(f"[DEBUG] Setelah filter sub_kategori '{sub_kategori}': {len(hasil)} item")
+        else:
+            print(f"[DEBUG] Tidak ada item dengan sub_kategori '{sub_kategori}', pakai semua hasil")
+    
+    # Fallback untuk minuman
+    if not hasil and kategori == "minuman":
+        print(f"[DEBUG] Fallback: ambil semua minuman")
+        hasil = [item for item in data if item["kategori"] == "minuman"]
+    
+    # Fallback untuk kategori lain
+    if not hasil:
+        if kategori == "asin":
+            hasil = [item for item in data if item["kategori"] in ["asin", "makanan berat"]]
+        elif kategori == "manis":
+            hasil = [item for item in data if item["kategori"] in ["manis", "dessert"]]
+    
+    return hasil
+
+def format_rekomendasi(kategori: str, data: list, sub_kategori: str = None):
+    """Format rekomendasi dengan informasi subkategori"""
+    if not data:
+        return "Maaf, aku belum menemukan rekomendasi yang cocok untuk kategori ini."
+
+    # Mapping intro berdasarkan kategori dan subkategori
+    intro_map = {
+        "pedas": {
+            "berkuah": "🍜 Lagi pengen **pedas berkuah**? Ini rekomendasinya:",
+            "goreng": "🍗 Lagi pengen **pedas gorengan**? Cek ini yuk:",
+            "default": "🌶️ Kalau lagi pengen makanan pedas, ini rekomendasinya:"
+        },
+        "manis": {
+            "berkuah": "🥣 Lagi pengen yang **manis berkuah**? Ini pilihannya:",
+            "goreng": "🍩 Lagi pengen **manis gorengan**? Coba ini:",
+            "default": "🍰 Kalau lagi cari yang manis, ini pilihannya:"
+        },
+        "asin": {
+            "berkuah": "🍲 Lagi pengen **makanan berkuah** yang gurih? Ini rekomendasinya:",
+            "goreng": "🍟 Lagi pengen **gorengan renyah** yang gurih? Cek ini:",
+            "default": "🍛 Kalau lagi pengen makanan asin/gurih, ini rekomendasinya:"
+        },
+        "minuman": {
+            "minuman_dingin": "🥤❄️ Lagi **haus** dan butuh yang **dingin & segar**? Cek rekomendasi ini:",
+            "minuman_hangat": "☕🔥 Lagi pengen yang **hangat & nikmat**? Cobain yuk:",
+            "default": "🥤 Ada yang haus? Cek rekomendasi minuman ini:"
+        },
+        "dessert": {
+            "berkuah": "🥣 Lagi pengen dessert yang **berkuah**? Ini pilihannya:",
+            "goreng": "🍩 Lagi pengen dessert **gorengan**? Coba ini:",
+            "default": "🍮 Kalau lagi pengen dessert, ini rekomendasinya:"
+        }
+    }
+    
+    # Pilih intro yang sesuai
+    kategori_intro = intro_map.get(kategori, {})
+    
+    if sub_kategori and sub_kategori in kategori_intro:
+        response = kategori_intro[sub_kategori]
+    else:
+        response = kategori_intro.get("default", f"🍽️ Rekomendasi {kategori}:")
+    
+    response += "\n\n"
+    
+    # Sort by rating
+    data_sorted = sorted(data, key=lambda x: x["rating"], reverse=True)
+    
+    # Tampilkan top 5 rekomendasi
+    for i, item in enumerate(data_sorted[:5], 1):
+        response += (
+            f"{i}. **{item['nama_tempat']}** ⭐ {item['rating']}\n"
+            f"   📍 {item['lokasi']} | 🍽️ {item['menu']}\n"
+        )
+        
+        # Tambahkan info subkategori
+        if item["sub_kategori"] == "berkuah":
+            response += f"   💧 Makanan berkuah\n"
+        elif item["sub_kategori"] == "goreng":
+            response += f"   🔥 Gorengan/crispy\n"
+        elif item["sub_kategori"] == "minuman_dingin":
+            response += f"   ❄️ Minuman dingin & segar\n"
+        elif item["sub_kategori"] == "minuman_hangat":
+            response += f"   🔥 Minuman hangat\n"
+        
+        response += "\n"
+    
+    # Tambahkan rekomendasi terbaik
+    if data_sorted:
+        terbaik = data_sorted[0]
+        response += (
+            f"✨ **Rekomendasi teratas**: {terbaik['nama_tempat']} "
+            f"dengan rating {terbaik['rating']} ⭐\n"
+        )
+        
+        if kategori == "minuman":
+            if terbaik["sub_kategori"] == "minuman_dingin":
+                response += f"   🥤 Cocok diminum saat siang hari yang panas!"
+            elif terbaik["sub_kategori"] == "minuman_hangat":
+                response += f"   ☕ Cocok diminum saat malam atau cuaca dingin!"
+        
+        response += f"\n   Menu andalan: {terbaik['menu']} di {terbaik['lokasi']}"
+    
+    return response
 
 @app.post("/chat")
 def chat_ai(data: ChatRequest):
@@ -244,24 +502,21 @@ def chat_ai(data: ChatRequest):
 
         # Cek rekomendasi makanan dari CSV
         hasil_rekomendasi = rekomendasi_makanan(prompt)
-
-        if hasil_rekomendasi:
-            response_text = "Aku rekomendasikan:\n\n"
-
-            for item in hasil_rekomendasi:
-                response_text += (
-                    f"- {item['nama_tempat']} "
-                    f"({item['menu']}) "
-                    f"di {item['lokasi']} "
-                    f"dengan rating {item['rating']}\n"
-                )
-
+        
+        if hasil_rekomendasi and len(hasil_rekomendasi) > 0:
+            kategori = hasil_rekomendasi[0]["kategori"]
+            sub_kategori = detect_subkategori_from_prompt(prompt)
+            response_text = format_rekomendasi(kategori, hasil_rekomendasi, sub_kategori)
+            
             return {
                 "success": True,
                 "prompt": prompt,
                 "response": response_text,
                 "source": "csv",
-                "data": hasil_rekomendasi
+                "kategori": kategori,
+                "sub_kategori": sub_kategori,
+                "total_rekomendasi": len(hasil_rekomendasi),
+                "data": hasil_rekomendasi[:5]
             }
 
         intent = detect_intent(prompt)
@@ -346,5 +601,6 @@ def get_all_data():
 def get_tempat_makan():
     return {
         "success": True,
+        "total": len(load_tempat_makan()),
         "data": load_tempat_makan()
     }
