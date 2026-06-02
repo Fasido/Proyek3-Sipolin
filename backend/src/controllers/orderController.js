@@ -72,6 +72,36 @@ const firstString = (...values) => {
   return "";
 };
 
+const toNullableFloat = (...values) => {
+  for (const value of values) {
+    if (value === undefined || value === null || value === "") continue;
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+};
+
+const buildOrderLocationData = (body = {}) => ({
+  pickupLatitude: toNullableFloat(body.pickupLatitude, body.pickupLat, body.fromLatitude),
+  pickupLongitude: toNullableFloat(body.pickupLongitude, body.pickupLng, body.fromLongitude),
+  destinationLatitude: toNullableFloat(
+    body.destinationLatitude,
+    body.destinationLat,
+    body.dropoffLatitude,
+    body.dropOffLatitude,
+    body.toLatitude
+  ),
+  destinationLongitude: toNullableFloat(
+    body.destinationLongitude,
+    body.destinationLng,
+    body.dropoffLongitude,
+    body.dropOffLongitude,
+    body.toLongitude
+  ),
+  pickupNote: firstString(body.pickupNote, body.fromNote, body.senderNote),
+  destinationNote: firstString(body.destinationNote, body.dropoffNote, body.dropOffNote, body.toNote, body.receiverNote),
+});
+
 const normalizeRole = (role) => String(role || "").toUpperCase();
 const isDriverRole = (role) => normalizeRole(role) === "DRIVER";
 
@@ -224,6 +254,7 @@ export const createPolRide = async (req, res) => {
         description: note,
         pickup,
         destination,
+        ...buildOrderLocationData(req.body),
         price: calcRidePrice(),
         customerId: userId,
         status: STATUS.PENDING,
@@ -326,6 +357,7 @@ export const createPolSend = async (req, res) => {
         description: note,
         pickup,
         destination,
+        ...buildOrderLocationData(req.body),
         price: calcSendPrice(rawPrice),
         customerId: userId,
         status: STATUS.PENDING,

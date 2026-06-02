@@ -49,6 +49,7 @@ model User {
   sentMessages       Message[]      @relation("messageSender")
   broadcasts         Broadcast[]    // ✅ Link ke history broadcast admin
   aiChats             AiChat[]
+  foodRecommendations FoodRecommendation[]
 
   @@map("users")
 }
@@ -62,6 +63,14 @@ model Order {
   status      String   @default("pending")
   pickup      String
   destination String
+
+  // Map picker coordinates + location notes
+  pickupLatitude      Float?
+  pickupLongitude     Float?
+  destinationLatitude Float?
+  destinationLongitude Float?
+  pickupNote          String?
+  destinationNote     String?
 
   customerId String
   customer   User   @relation("customer", fields: [customerId], references: [id], onDelete: Cascade)
@@ -103,6 +112,21 @@ model Broadcast {
   createdAt DateTime @default(now())
 
   @@map("broadcasts")
+}
+
+
+// 🤖 AI CHAT HISTORY
+model AiChat {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prompt    String   @db.Text
+  response  String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+  @@map("ai_chats")
 }
 
 // 💬 CHAT MODELS
