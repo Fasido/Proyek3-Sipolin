@@ -1,3 +1,5 @@
+import csv
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -92,7 +94,7 @@ Gaya jawaban:
 - Kalau user bingung memilih fitur, bantu rekomendasikan fitur yang paling cocok.
 - Jangan mengarang data driver, harga, status pesanan, atau data database kalau tidak dikasih.
 """
-
+CSV_FILE = "tempat_makan.csv"
 
 def detect_intent(prompt: str) -> str:
     text = prompt.lower()
@@ -178,6 +180,56 @@ Jangan jawab seperti template tetap.
 
     return None
 
+def load_tempat_makan():
+    data = []
+
+    try:
+        with open(CSV_FILE, mode="r", encoding="utf-8") as file:
+            reader = csv.DictReader(file)
+
+            for row in reader:
+                data.append({
+                    "id": row["id"],
+                    "nama_tempat": row["nama_tempat"],
+                    "kategori": row["kategori"],
+                    "menu": row["menu"],
+                    "lokasi": row["lokasi"],
+                    "rating": row["rating"]
+                })
+
+    except Exception as e:
+        print(f"[CSV] Error membaca file: {e}")
+
+    return data
+
+def rekomendasi_makanan(prompt: str):
+    prompt = prompt.lower()
+
+    data = load_tempat_makan()
+
+    kategori_map = {
+        "pedas": "pedas",
+        "manis": "manis",
+        "dessert": "dessert",
+        "minuman": "minuman",
+        "makanan berat": "makanan berat"
+    }
+
+    kategori_ditemukan = None
+
+    for keyword, kategori in kategori_map.items():
+        if keyword in prompt:
+            kategori_ditemukan = kategori
+            break
+
+    if not kategori_ditemukan:
+        return None
+
+    return [
+        item
+        for item in data
+        if item["kategori"].lower() == kategori_ditemukan
+    ]
 
 @app.post("/chat")
 def chat_ai(data: ChatRequest):
@@ -188,6 +240,28 @@ def chat_ai(data: ChatRequest):
             return {
                 "success": False,
                 "error": "Prompt tidak boleh kosong."
+            }
+
+        # Cek rekomendasi makanan dari CSV
+        hasil_rekomendasi = rekomendasi_makanan(prompt)
+
+        if hasil_rekomendasi:
+            response_text = "Aku rekomendasikan:\n\n"
+
+            for item in hasil_rekomendasi:
+                response_text += (
+                    f"- {item['nama_tempat']} "
+                    f"({item['menu']}) "
+                    f"di {item['lokasi']} "
+                    f"dengan rating {item['rating']}\n"
+                )
+
+            return {
+                "success": True,
+                "prompt": prompt,
+                "response": response_text,
+                "source": "csv",
+                "data": hasil_rekomendasi
             }
 
         intent = detect_intent(prompt)
@@ -204,7 +278,7 @@ def chat_ai(data: ChatRequest):
 
         return {
             "success": True,
-            "prompt": data.prompt,
+            "prompt": prompt,
             "response": response_text,
             "intent_detected": {
                 "type": intent,
@@ -216,6 +290,7 @@ def chat_ai(data: ChatRequest):
 
     except Exception as e:
         print(f"[AI] Chat error: {e}")
+
         return {
             "success": False,
             "error": str(e)
@@ -265,4 +340,11 @@ def get_all_data():
                 }
             ]
         }
+    }
+
+@app.get("/tempat-makan")
+def get_tempat_makan():
+    return {
+        "success": True,
+        "data": load_tempat_makan()
     }
