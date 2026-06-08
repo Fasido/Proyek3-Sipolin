@@ -51,17 +51,80 @@ const ORDER_TYPE = {
   POL_SEND: "pol_send",
 };
 
-const RIDE_PRICE_PER_KM = 5000;
+const FIRST_KM_FARE = 5000;
+const NEXT_KM_FARE = 3000;
 const ESTIMATED_RIDE_KM = 3;
-const SEND_BASE_FEE = 5000;
 const SEND_SERVICE_PERCENT = 0.1;
+const ROAD_FACTOR = 1.25;
 
-const calcRidePrice = () => ESTIMATED_RIDE_KM * RIDE_PRICE_PER_KM;
+const toNumberOrNull = (value) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+};
 
-const calcSendPrice = (itemPrice = 20000) => {
+const haversineKm = (a, b) => {
+  if (!a || !b) return null;
+
+  const R = 6371;
+  const dLat = ((b.latitude - a.latitude) * Math.PI) / 180;
+  const dLon = ((b.longitude - a.longitude) * Math.PI) / 180;
+  const lat1 = (a.latitude * Math.PI) / 180;
+  const lat2 = (b.latitude * Math.PI) / 180;
+
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+};
+
+const getDistanceKmFromBody = (body = {}, fallbackKm = ESTIMATED_RIDE_KM) => {
+  const pickupLatitude = toNumberOrNull(body.pickupLatitude);
+  const pickupLongitude = toNumberOrNull(body.pickupLongitude);
+  const destinationLatitude = toNumberOrNull(body.destinationLatitude);
+  const destinationLongitude = toNumberOrNull(body.destinationLongitude);
+
+  if (
+    pickupLatitude !== null &&
+    pickupLongitude !== null &&
+    destinationLatitude !== null &&
+    destinationLongitude !== null
+  ) {
+    const directKm = haversineKm(
+      { latitude: pickupLatitude, longitude: pickupLongitude },
+      { latitude: destinationLatitude, longitude: destinationLongitude }
+    );
+
+    if (directKm && directKm > 0) {
+      return Math.max(1, directKm * ROAD_FACTOR);
+    }
+  }
+
+  const estimated = toNumberOrNull(body.estimatedDistanceKm);
+  if (estimated && estimated > 0) return Math.max(1, estimated);
+
+  return Math.max(1, fallbackKm);
+};
+
+const calcDistanceFare = (distanceKm) => {
+  const safeKm = Math.max(1, Number(distanceKm || 1));
+  const extraKm = Math.max(0, Math.ceil(safeKm - 1));
+
+  return FIRST_KM_FARE + extraKm * NEXT_KM_FARE;
+};
+
+const calcRidePrice = (body = {}) => {
+  const distanceKm = getDistanceKmFromBody(body, ESTIMATED_RIDE_KM);
+  return calcDistanceFare(distanceKm);
+};
+
+const calcSendPrice = (itemPrice = 20000, body = {}) => {
   const price = Number(itemPrice || 20000);
-  const fee = SEND_BASE_FEE + price * SEND_SERVICE_PERCENT;
-  return Math.round(price + fee);
+  const serviceFee = price * SEND_SERVICE_PERCENT;
+  const distanceKm = getDistanceKmFromBody(body, 1);
+  const deliveryFee = calcDistanceFare(distanceKm);
+
+  return Math.round(price + serviceFee + deliveryFee);
 };
 
 const firstString = (...values) => {
@@ -71,36 +134,6 @@ const firstString = (...values) => {
   }
   return "";
 };
-
-const toNullableFloat = (...values) => {
-  for (const value of values) {
-    if (value === undefined || value === null || value === "") continue;
-    const n = Number(value);
-    if (Number.isFinite(n)) return n;
-  }
-  return null;
-};
-
-const buildOrderLocationData = (body = {}) => ({
-  pickupLatitude: toNullableFloat(body.pickupLatitude, body.pickupLat, body.fromLatitude),
-  pickupLongitude: toNullableFloat(body.pickupLongitude, body.pickupLng, body.fromLongitude),
-  destinationLatitude: toNullableFloat(
-    body.destinationLatitude,
-    body.destinationLat,
-    body.dropoffLatitude,
-    body.dropOffLatitude,
-    body.toLatitude
-  ),
-  destinationLongitude: toNullableFloat(
-    body.destinationLongitude,
-    body.destinationLng,
-    body.dropoffLongitude,
-    body.dropOffLongitude,
-    body.toLongitude
-  ),
-  pickupNote: firstString(body.pickupNote, body.fromNote, body.senderNote),
-  destinationNote: firstString(body.destinationNote, body.dropoffNote, body.dropOffNote, body.toNote, body.receiverNote),
-});
 
 const normalizeRole = (role) => String(role || "").toUpperCase();
 const isDriverRole = (role) => normalizeRole(role) === "DRIVER";
@@ -254,8 +287,7 @@ export const createPolRide = async (req, res) => {
         description: note,
         pickup,
         destination,
-        ...buildOrderLocationData(req.body),
-        price: calcRidePrice(),
+        price: calcRidePrice(req.body),
         customerId: userId,
         status: STATUS.PENDING,
       },
@@ -357,8 +389,7 @@ export const createPolSend = async (req, res) => {
         description: note,
         pickup,
         destination,
-        ...buildOrderLocationData(req.body),
-        price: calcSendPrice(rawPrice),
+        price: calcSendPrice(rawPrice, req.body),
         customerId: userId,
         status: STATUS.PENDING,
       },

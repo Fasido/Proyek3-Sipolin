@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
 import { usersAPI, ordersAPI, extractApiList } from '../../services/api';
+import { POLSEND_SEARCH_ITEMS, getPolsendRouteParams, matchesPolsendSearch, scorePolsendSearch } from '../../data/polsendCatalog';
 import {
   Bell,
   ChevronRight,
@@ -128,13 +129,7 @@ const PROMO_BANNERS = [
     badge: 'POL-RIDE',
     badgeColor: '#B9FF66',
     gradient: ['#00C46A', '#007A3E'],
-    image: (() => {
-      try {
-        return require('../../assets/images/banner-ride.jpg');
-      } catch {
-        return null;
-      }
-    })(),
+    image: require('../../assets/images/banner-polride.jpg'),
     route: '/orders/create/pol_ride',
     cta: 'Pesan Sekarang',
   },
@@ -145,13 +140,7 @@ const PROMO_BANNERS = [
     badge: 'POL-SEND',
     badgeColor: '#93C5FD',
     gradient: ['#1A73E8', '#0D47A1'],
-    image: (() => {
-      try {
-        return require('../../assets/images/banner-send.jpg');
-      } catch {
-        return null;
-      }
-    })(),
+    image: require('../../assets/images/banner-polsend.jpg'),
     route: '/orders/create/pol_send',
     cta: 'Kirim Sekarang',
   },
@@ -162,13 +151,7 @@ const PROMO_BANNERS = [
     badge: 'AI ASSISTANT',
     badgeColor: '#FFD700',
     gradient: ['#111827', '#00AA5B'],
-    image: (() => {
-      try {
-        return require('../../assets/images/banner-member.png');
-      } catch {
-        return null;
-      }
-    })(),
+    image: require('../../assets/images/banner-ai.jpg'),
   route: '/chatbot',
     cta: 'Mulai Chat',
   },
@@ -179,13 +162,7 @@ const PROMO_BANNERS = [
     badge: 'REALTIME',
     badgeColor: '#FF4D6D',
     gradient: ['#F59E0B', '#B45309'],
-    image: (() => {
-      try {
-        return require('../../assets/images/banner-event.png');
-      } catch {
-        return null;
-      }
-    })(),
+    image: require('../../assets/images/banner-orders.jpg'),
     route: '/orders',
     cta: 'Lihat Order',
   },
@@ -208,8 +185,8 @@ const SERVICE_MENU = [
   {
     id: 'polsend',
     label: 'Pol-Send',
-    subtitle: 'Kirim barang',
-    promo: '-30rb',
+    subtitle: 'Makanan & barang',
+    promo: 'Food',
     promoColor: BLUE,
     bg: '#EEF6FF',
     border: '#C9E0FF',
@@ -218,42 +195,9 @@ const SERVICE_MENU = [
     fallbackColor: BLUE,
     route: '/orders/create/pol_send',
   },
-  {
-    id: 'nitip',
-    label: 'Nitip',
-    subtitle: 'Titip beli',
-    promo: null,
-    promoColor: null,
-    bg: '#FFF7ED',
-    border: '#FED7AA',
-    icon: ICON_NITIP,
-    fallback: Package,
-    fallbackColor: ORANGE,
-    route: null,
-  },
-  {
-    id: 'lainnya',
-    label: 'Lainnya',
-    subtitle: 'Fitur lain',
-    promo: null,
-    promoColor: null,
-    bg: '#F8FAFC',
-    border: '#E2E8F0',
-    icon: null,
-    fallback: MoreHorizontal,
-    fallbackColor: INK_MID,
-    route: null,
-  },
 ];
 
-const FOODS_DATASET = [
-  { id: 1, name: 'Nasi Goreng Spesial', resto: 'Warung Pak Haji', price: 18000, tag: 'nasi' },
-  { id: 2, name: 'Mie Ayam Bakso', resto: 'Mie Pak Slamet', price: 15000, tag: 'mie' },
-  { id: 3, name: 'Ayam Penyet', resto: 'Dapur Bu Endah', price: 22000, tag: 'ayam' },
-  { id: 4, name: 'Es Teh Manis', resto: 'Kantin Polindra', price: 5000, tag: 'minum' },
-  { id: 5, name: 'Bakso Urat Jumbo', resto: 'Bakso Mas Bro', price: 20000, tag: 'bakso' },
-  { id: 6, name: 'Soto Ayam Lamongan', resto: 'Soto Bu Kartini', price: 17000, tag: 'soto' },
-];
+const FOODS_DATASET = POLSEND_SEARCH_ITEMS;
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 const Avatar = ({ user, size = 44 }) => {
@@ -337,37 +281,49 @@ const SectionHeader = ({ title, action, onAction }) => (
 );
 
 // ─── Promo Banner Card ────────────────────────────────────────────────────────
+const PromoBannerVisual = ({ item }) => {
+  const visual = item.id === '1' ? '🏍️' : item.id === '2' ? '📦' : item.id === '3' ? '🤖' : '📍';
+
+  return (
+    <View style={S.promoVisualWrap}>
+      <View style={S.promoVisualGlow} />
+      <Text style={S.promoVisualEmoji}>{visual}</Text>
+    </View>
+  );
+};
+
 const PromoBannerCard = ({ item, router }) => (
   <TouchableOpacity
     activeOpacity={0.92}
     onPress={() => item.route && router.push(item.route)}
     style={[S.promoBannerCard, { width: SW - 40 }]}
   >
-    {item.image ? (
-      <>
-        <Image source={item.image} style={S.promoBannerBgImage} resizeMode="cover" />
-        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.72)']} style={S.promoBannerOverlay} />
-        <LinearGradient
-          colors={[item.gradient[0] + 'DD', 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={S.promoBannerSideGlow}
-        />
-      </>
-    ) : (
-      <LinearGradient
-        colors={item.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-    )}
+    <LinearGradient
+      colors={item.gradient}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={StyleSheet.absoluteFill}
+    />
+
+    <Image source={item.image} style={S.promoBannerBgImage} resizeMode="cover" />
+    <LinearGradient
+      colors={["rgba(0,0,0,0.06)", "rgba(0,0,0,0.72)"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={S.promoBannerOverlay}
+    />
+    <LinearGradient
+      colors={[`${item.gradient[0]}E6`, "rgba(15,23,42,0.05)"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
+      style={S.promoBannerSideGlow}
+    />
 
     <View style={S.promoBannerCircle1} />
     <View style={S.promoBannerCircle2} />
 
     <View style={S.promoBannerInner}>
-      <View style={[S.promoBannerBadge, { backgroundColor: item.badgeColor }]}>
+      <View style={[S.promoBannerBadge, { backgroundColor: item.badgeColor }]}> 
         <Text style={S.promoBannerBadgeText}>{item.badge}</Text>
       </View>
 
@@ -386,6 +342,7 @@ const PromoBannerCard = ({ item, router }) => (
   </TouchableOpacity>
 );
 
+// ─── Service Menu Item ────────────────────────────────────────────────────────
 // ─── Service Menu Item ────────────────────────────────────────────────────────
 const ServiceMenuItem = ({ item, onPress }) => {
   const FallbackIcon = item.fallback;
@@ -693,13 +650,31 @@ const CustomerDashboard = ({ user, stats, orders, refreshing, onRefresh, router 
       return;
     }
 
-    const q = text.toLowerCase();
-    const results = FOODS_DATASET.filter(
-      (f) => f.name.toLowerCase().includes(q) || f.resto.toLowerCase().includes(q) || f.tag.includes(q)
-    );
+    const results = FOODS_DATASET
+      .map((item) => ({
+        ...item,
+        _searchScore: scorePolsendSearch(item, text),
+      }))
+      .filter((item) => item._searchScore > 0)
+      .sort((a, b) => {
+        if (b._searchScore !== a._searchScore) return b._searchScore - a._searchScore;
+
+        const aService = a.type === 'service' ? 0 : 1;
+        const bService = b.type === 'service' ? 0 : 1;
+        if (aService !== bService) return aService - bService;
+
+        const aPopular = a.isPopular ? 0 : 1;
+        const bPopular = b.isPopular ? 0 : 1;
+        if (aPopular !== bPopular) return aPopular - bPopular;
+
+        return String(a.name || '').localeCompare(String(b.name || ''));
+      })
+      .slice(0, 12);
 
     setSearchResults(results);
   }, []);
+
+  const showSearchPanel = searchQuery.trim().length > 0;
 
   return (
     <ScrollView
@@ -736,8 +711,11 @@ const CustomerDashboard = ({ user, stats, orders, refreshing, onRefresh, router 
             value={searchQuery}
             onChangeText={handleSearch}
             onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
+            onBlur={() => {}}
             returnKeyType="search"
+            autoCorrect={false}
+            autoCapitalize="none"
+            blurOnSubmit={false}
           />
 
           {searchQuery.length > 0 ? (
@@ -754,7 +732,7 @@ const CustomerDashboard = ({ user, stats, orders, refreshing, onRefresh, router 
           )}
         </View>
 
-        {searchFocused && searchResults.length > 0 && (
+        {showSearchPanel && searchResults.length > 0 && (
           <View style={S.searchDropdown}>
             {searchResults.map((item) => (
               <TouchableOpacity
@@ -763,13 +741,34 @@ const CustomerDashboard = ({ user, stats, orders, refreshing, onRefresh, router 
                 style={S.searchDropdownItem}
                 onPress={() => {
                   handleSearch('');
+                  setSearchFocused(false);
+
+                  if (item.type === 'service' && item.route) {
+                    router.push(item.route);
+                    return;
+                  }
+
+                  router.push({
+                    pathname: '/orders/create/pol_send',
+                    params: getPolsendRouteParams(item),
+                  });
                 }}
               >
-                <View>
-                  <Text style={S.searchResultTitle}>{item.name}</Text>
-                  <Text style={S.searchResultSubtitle}>
-                    {item.resto} · {formatIDR(item.price)}
-                  </Text>
+                <View style={S.searchResultLeft}>
+                  <View style={S.searchResultThumb}>
+                    <Text style={S.searchResultEmoji}>{item.emoji || item.merchantEmoji || '🍽️'}</Text>
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={S.searchResultTitle}>{item.name}</Text>
+                    <Text style={S.searchResultSubtitle}>
+                      {item.type === 'service'
+                        ? item.resto
+                        : item.type === 'merchant'
+                          ? `${item.resto} · ${item.distanceLabel || 'Dekat'}`
+                          : `${item.resto} · ${formatIDR(item.price)}`}
+                    </Text>
+                  </View>
                 </View>
                 <ChevronRight size={14} color={MUTED} strokeWidth={2} />
               </TouchableOpacity>
@@ -777,7 +776,7 @@ const CustomerDashboard = ({ user, stats, orders, refreshing, onRefresh, router 
           </View>
         )}
 
-        {searchFocused && searchQuery.length > 0 && searchResults.length === 0 && (
+        {showSearchPanel && searchResults.length === 0 && (
           <View style={[S.searchDropdown, S.searchEmpty]}>
             <Text style={S.searchEmptyText}>Hasil tidak ditemukan untuk "{searchQuery}"</Text>
           </View>
@@ -1285,17 +1284,35 @@ const S = StyleSheet.create({
     shadowColor: '#0f172a',
     shadowOpacity: 0.08,
     shadowRadius: 12,
-    elevation: 6,
+    elevation: 10,
+    zIndex: 20,
     overflow: 'hidden',
   },
   searchDropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
+  },
+  searchResultLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  searchResultThumb: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    backgroundColor: PRIMARY_LT,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchResultEmoji: {
+    fontSize: 20,
   },
   searchResultTitle: {
     fontSize: 14,
@@ -1363,6 +1380,30 @@ const S = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.05)',
     right: 40,
     bottom: -30,
+  },
+  promoVisualWrap: {
+    position: 'absolute',
+    right: 18,
+    top: 28,
+    width: 108,
+    height: 108,
+    borderRadius: 34,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ rotate: '-5deg' }],
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  promoVisualGlow: {
+    position: 'absolute',
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  promoVisualEmoji: {
+    fontSize: 52,
   },
   promoBannerBadge: {
     alignSelf: 'flex-start',
@@ -1441,7 +1482,8 @@ const S = StyleSheet.create({
 
   serviceMenuRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 12,
+    overflow: 'visible',
   },
   serviceMenuItem: {
     flex: 1,
@@ -1449,8 +1491,8 @@ const S = StyleSheet.create({
     paddingVertical: 4,
   },
   serviceMenuCard: {
-    width: 68,
-    height: 68,
+    width: '100%',
+    height: 82,
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1464,8 +1506,8 @@ const S = StyleSheet.create({
     elevation: 3,
   },
   serviceMenuImage: {
-    width: 50,
-    height: 50,
+    width: 58,
+    height: 58,
   },
   serviceMenuBadge: {
     position: 'absolute',

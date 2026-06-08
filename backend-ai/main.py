@@ -413,28 +413,28 @@ def format_rekomendasi(kategori: str, data: list, sub_kategori: str = None):
     # Mapping intro berdasarkan kategori dan subkategori
     intro_map = {
         "pedas": {
-            "berkuah": "🍜 Lagi pengen **pedas berkuah**? Ini rekomendasinya:",
-            "goreng": "🍗 Lagi pengen **pedas gorengan**? Cek ini yuk:",
+            "berkuah": "🍜 Lagi pengen pedas berkuah? Ini rekomendasinya:",
+            "goreng": "🍗 Lagi pengen pedas gorengan? Cek ini yuk:",
             "default": "🌶️ Kalau lagi pengen makanan pedas, ini rekomendasinya:"
         },
         "manis": {
-            "berkuah": "🥣 Lagi pengen yang **manis berkuah**? Ini pilihannya:",
-            "goreng": "🍩 Lagi pengen **manis gorengan**? Coba ini:",
+            "berkuah": "🥣 Lagi pengen yang manis berkuah? Ini pilihannya:",
+            "goreng": "🍩 Lagi pengen manis gorengan? Coba ini:",
             "default": "🍰 Kalau lagi cari yang manis, ini pilihannya:"
         },
         "asin": {
-            "berkuah": "🍲 Lagi pengen **makanan berkuah** yang gurih? Ini rekomendasinya:",
-            "goreng": "🍟 Lagi pengen **gorengan renyah** yang gurih? Cek ini:",
+            "berkuah": "🍲 Lagi pengen makanan berkuah yang gurih? Ini rekomendasinya:",
+            "goreng": "🍟 Lagi pengen gorengan renyah yang gurih? Cek ini:",
             "default": "🍛 Kalau lagi pengen makanan asin/gurih, ini rekomendasinya:"
         },
         "minuman": {
-            "minuman_dingin": "🥤❄️ Lagi **haus** dan butuh yang **dingin & segar**? Cek rekomendasi ini:",
-            "minuman_hangat": "☕🔥 Lagi pengen yang **hangat & nikmat**? Cobain yuk:",
+            "minuman_dingin": "🥤❄️ Lagi haus dan butuh yang dingin & segar? Cek rekomendasi ini:",
+            "minuman_hangat": "☕🔥 Lagi pengen yang hangat & nikmat? Cobain yuk:",
             "default": "🥤 Ada yang haus? Cek rekomendasi minuman ini:"
         },
         "dessert": {
-            "berkuah": "🥣 Lagi pengen dessert yang **berkuah**? Ini pilihannya:",
-            "goreng": "🍩 Lagi pengen dessert **gorengan**? Coba ini:",
+            "berkuah": "🥣 Lagi pengen dessert yang berkuah? Ini pilihannya:",
+            "goreng": "🍩 Lagi pengen dessert gorengan? Coba ini:",
             "default": "🍮 Kalau lagi pengen dessert, ini rekomendasinya:"
         }
     }
@@ -455,7 +455,7 @@ def format_rekomendasi(kategori: str, data: list, sub_kategori: str = None):
     # Tampilkan top 5 rekomendasi
     for i, item in enumerate(data_sorted[:5], 1):
         response += (
-            f"{i}. **{item['nama_tempat']}** ⭐ {item['rating']}\n"
+            f"{i}. {item['nama_tempat']} ⭐ {item['rating']}\n"
             f"   📍 {item['lokasi']} | 🍽️ {item['menu']}\n"
         )
         
@@ -475,7 +475,7 @@ def format_rekomendasi(kategori: str, data: list, sub_kategori: str = None):
     if data_sorted:
         terbaik = data_sorted[0]
         response += (
-            f"✨ **Rekomendasi teratas**: {terbaik['nama_tempat']} "
+            f"✨ Rekomendasi teratas: {terbaik['nama_tempat']} "
             f"dengan rating {terbaik['rating']} ⭐\n"
         )
         

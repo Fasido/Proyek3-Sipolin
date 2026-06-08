@@ -23,7 +23,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Buat .env di sipolin-mobile:
 // EXPO_PUBLIC_API_URL=http://IP-LAPTOP:3000/api
 
-const DEFAULT_BASE_URL = "http://192.168.1.23:3000/api";
+const DEFAULT_BASE_URL = "http://192.168.110.224:3000/api";
 
 const RAW_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL &&
@@ -115,7 +115,8 @@ export const extractStats = (payload) => {
 
   return {
     totalOrders: data?.totalOrders ?? data?.data?.totalOrders ?? 0,
-    totalTrips: data?.totalTrips ?? data?.data?.totalTrips ?? data?.totalOrders ?? 0,
+    totalTrips:
+      data?.totalTrips ?? data?.data?.totalTrips ?? data?.totalOrders ?? 0,
     activeOrders: data?.activeOrders ?? data?.data?.activeOrders ?? 0,
     completedOrders: data?.completedOrders ?? data?.data?.completedOrders ?? 0,
     unreadNotifications:
@@ -161,11 +162,7 @@ const removeTokenEverywhere = async () => {
 
 const normalizeOrderPayload = (data = {}) => {
   const pickupLocation =
-    data.pickupLocation ||
-    data.pickupAddress ||
-    data.pickup ||
-    data.from ||
-    "";
+    data.pickupLocation || data.pickupAddress || data.pickup || data.from || "";
 
   const dropoffLocation =
     data.dropoffLocation ||
@@ -179,6 +176,9 @@ const normalizeOrderPayload = (data = {}) => {
     pickupLocation: cleanString(pickupLocation),
     dropoffLocation: cleanString(dropoffLocation),
     note: cleanString(data.note || data.description),
+    estimatedDistanceKm: data.estimatedDistanceKm,
+    estimatedDeliveryFee: data.estimatedDeliveryFee,
+    estimatedPrice: data.estimatedPrice,
   };
 };
 
@@ -225,6 +225,9 @@ const normalizePolSendPayload = (data = {}) => {
     dropoffLocation: cleanString(dropoffLocation),
     foodPrice: Number(rawPrice || 20000),
     estimatedItemPrice: Number(rawPrice || 20000),
+    estimatedDistanceKm: data.estimatedDistanceKm,
+    estimatedDeliveryFee: data.estimatedDeliveryFee,
+    estimatedPrice: data.estimatedPrice,
     note: cleanString(data.note || data.description),
   };
 };
@@ -258,13 +261,13 @@ api.interceptors.request.use(
       const method = String(config.method || "GET").toUpperCase();
       const url = `${config.baseURL || ""}${config.url || ""}`;
       console.log(
-        `[API REQUEST] ${method} ${url} ${token ? "TOKEN_OK" : "NO_TOKEN"}`
+        `[API REQUEST] ${method} ${url} ${token ? "TOKEN_OK" : "NO_TOKEN"}`,
       );
     }
 
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 api.interceptors.response.use(
@@ -290,7 +293,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 // ─────────────────────────────────────────────────────────────
@@ -329,7 +332,7 @@ export const authAPI = {
     phone,
     role = "user",
     plateNumber = null,
-    vehicleDetail = null
+    vehicleDetail = null,
   ) => {
     const response = await api.post("/auth/register", {
       email,
@@ -547,6 +550,9 @@ export const ordersAPI = {
       itemPrice: payload.foodPrice,
       price: payload.foodPrice,
       estimatedItemPrice: payload.estimatedItemPrice,
+      estimatedDistanceKm: payload.estimatedDistanceKm,
+      estimatedDeliveryFee: payload.estimatedDeliveryFee,
+      estimatedPrice: payload.estimatedPrice,
 
       note: payload.note || "",
     });
@@ -584,6 +590,9 @@ export const ordersAPI = {
       itemPrice: payload.foodPrice,
       price: payload.foodPrice,
       estimatedItemPrice: payload.estimatedItemPrice,
+      estimatedDistanceKm: payload.estimatedDistanceKm,
+      estimatedDeliveryFee: payload.estimatedDeliveryFee,
+      estimatedPrice: payload.estimatedPrice,
 
       note: payload.note || "",
     });
@@ -745,23 +754,29 @@ export const chatAPI = {
   },
 
   getMessages: async (roomId, cursor = null) => {
-    const response = await api.get(`/chat/rooms/${normalizeId(roomId)}/messages`, {
-      params: {
-        cursor,
-        limit: 30,
+    const response = await api.get(
+      `/chat/rooms/${normalizeId(roomId)}/messages`,
+      {
+        params: {
+          cursor,
+          limit: 30,
+        },
       },
-    });
+    );
 
     return extractApiItem(response);
   },
 
   messages: async (roomId, cursor = null) => {
-    const response = await api.get(`/chat/rooms/${normalizeId(roomId)}/messages`, {
-      params: {
-        cursor,
-        limit: 30,
+    const response = await api.get(
+      `/chat/rooms/${normalizeId(roomId)}/messages`,
+      {
+        params: {
+          cursor,
+          limit: 30,
+        },
       },
-    });
+    );
 
     return extractApiItem(response);
   },
@@ -801,9 +816,12 @@ export const chatAPI = {
    * Backend batch chat sudah disiapkan untuk endpoint ini.
    */
   sendMessage: async (roomId, text) => {
-    const response = await api.post(`/chat/rooms/${normalizeId(roomId)}/messages`, {
-      text,
-    });
+    const response = await api.post(
+      `/chat/rooms/${normalizeId(roomId)}/messages`,
+      {
+        text,
+      },
+    );
 
     return extractApiItem(response);
   },
@@ -864,9 +882,7 @@ const buildAIResult = (axiosResponse) => {
     }
   }
 
-  const safeAnswer =
-    answer ||
-    "Maaf, aku belum bisa menjawab pertanyaan itu.";
+  const safeAnswer = answer || "Maaf, aku belum bisa menjawab pertanyaan itu.";
 
   // Return top-level response/answer supaya screen lama yang baca
   // result.response atau result.answer tetap langsung jalan.
@@ -893,11 +909,7 @@ const normalizeAIPrompt = (input) => {
   if (typeof input === "string") return input.trim();
 
   return String(
-    input?.prompt ||
-      input?.message ||
-      input?.text ||
-      input?.question ||
-      ""
+    input?.prompt || input?.message || input?.text || input?.question || "",
   ).trim();
 };
 

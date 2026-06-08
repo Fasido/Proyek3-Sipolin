@@ -19,9 +19,9 @@ import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { ordersAPI } from "../../../../services/api";
 
-const ESTIMATED_DISTANCE_KM = 3;
-const BASE_FARE = 5000;
-const PRICE_PER_KM = 3000;
+const FIRST_KM_FARE = 5000;
+const NEXT_KM_FARE = 3000;
+const ROAD_FACTOR = 1.25;
 
 const PRIMARY = "#00AA5B";
 const PRIMARY_DK = "#007A3E";
@@ -57,6 +57,67 @@ function formatRupiah(value) {
 function getOrderFromResponse(response) {
   return response?.data?.data || response?.data?.order || response?.data || null;
 }
+
+
+const toFiniteNumber = (value) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+};
+
+const getLocationCoord = (location) => {
+  const latitude = toFiniteNumber(location?.latitude);
+  const longitude = toFiniteNumber(location?.longitude);
+
+  if (latitude === null || longitude === null) return null;
+  return { latitude, longitude };
+};
+
+const haversineKm = (a, b) => {
+  if (!a || !b) return null;
+
+  const R = 6371;
+  const dLat = ((b.latitude - a.latitude) * Math.PI) / 180;
+  const dLon = ((b.longitude - a.longitude) * Math.PI) / 180;
+  const lat1 = (a.latitude * Math.PI) / 180;
+  const lat2 = (b.latitude * Math.PI) / 180;
+
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+};
+
+const estimateRouteDistanceKm = (pickup, destination) => {
+  const start = getLocationCoord(pickup);
+  const end = getLocationCoord(destination);
+  const directKm = haversineKm(start, end);
+
+  if (!directKm || directKm <= 0) return null;
+
+  // Haversine itu garis lurus. Dikalikan road factor biar lebih dekat
+  // dengan jarak jalan asli di lapangan.
+  return Math.max(1, directKm * ROAD_FACTOR);
+};
+
+const calculateDistanceFare = (distanceKm) => {
+  if (!distanceKm || distanceKm <= 0) return FIRST_KM_FARE;
+
+  const extraKm = Math.max(0, Math.ceil(distanceKm - 1));
+  return FIRST_KM_FARE + extraKm * NEXT_KM_FARE;
+};
+
+const formatDistance = (distanceKm) => {
+  if (!distanceKm) return "Pilih dua titik";
+  if (distanceKm < 1) return "< 1 km";
+  return `${distanceKm.toFixed(1)} km`;
+};
+
+const getExtraKm = (distanceKm) => {
+  if (!distanceKm || distanceKm <= 1) return 0;
+  return Math.max(0, Math.ceil(distanceKm - 1));
+};
+
 
 const LocationCard = ({ type, title, subtitle, location, icon, color, onPress }) => {
   const hasValue = Boolean(location?.label);
@@ -114,9 +175,15 @@ export default function PolRideScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paramsKey]);
 
+  const estimatedDistanceKm = useMemo(() => {
+    return estimateRouteDistanceKm(pickup, destination);
+  }, [pickup, destination]);
+
   const estimatedPrice = useMemo(() => {
-    return BASE_FARE + ESTIMATED_DISTANCE_KM * PRICE_PER_KM;
-  }, []);
+    return calculateDistanceFare(estimatedDistanceKm);
+  }, [estimatedDistanceKm]);
+
+  const extraKm = getExtraKm(estimatedDistanceKm);
 
   const openPicker = (target) => {
     const selected = target === "pickup" ? pickup : destination;
@@ -172,7 +239,7 @@ export default function PolRideScreen() {
         destinationLongitude: destination.longitude ? Number(destination.longitude) : undefined,
         pickupNote: pickup.note?.trim(),
         destinationNote: destination.note?.trim(),
-        estimatedDistanceKm: ESTIMATED_DISTANCE_KM,
+        estimatedDistanceKm: estimatedDistanceKm || 1,
         estimatedPrice,
         note: note.trim(),
       });
@@ -295,7 +362,7 @@ export default function PolRideScreen() {
             <View style={S.priceTop}>
               <View>
                 <Text style={S.priceLabel}>Estimasi Harga</Text>
-                <Text style={S.priceSub}>Estimasi jarak {ESTIMATED_DISTANCE_KM} km</Text>
+                <Text style={S.priceSub}>Estimasi jarak {formatDistance(estimatedDistanceKm)}</Text>
               </View>
               <View style={S.priceIcon}>
                 <Feather name="tag" size={20} color={WHITE} />
@@ -307,12 +374,12 @@ export default function PolRideScreen() {
             <View style={S.priceDivider} />
 
             <View style={S.rowBetween}>
-              <Text style={S.mutedText}>Biaya awal</Text>
-              <Text style={S.boldText}>{formatRupiah(BASE_FARE)}</Text>
+              <Text style={S.mutedText}>1 km pertama</Text>
+              <Text style={S.boldText}>{formatRupiah(FIRST_KM_FARE)}</Text>
             </View>
             <View style={S.rowBetween}>
-              <Text style={S.mutedText}>Biaya per km</Text>
-              <Text style={S.boldText}>{formatRupiah(PRICE_PER_KM)}</Text>
+              <Text style={S.mutedText}>Km berikutnya ({extraKm} km × {formatRupiah(NEXT_KM_FARE)})</Text>
+              <Text style={S.boldText}>{formatRupiah(extraKm * NEXT_KM_FARE)}</Text>
             </View>
           </View>
 

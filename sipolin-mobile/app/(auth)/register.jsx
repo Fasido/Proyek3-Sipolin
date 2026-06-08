@@ -687,4 +687,4 @@ export default function RegisterScreen() {
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-}
+}7
