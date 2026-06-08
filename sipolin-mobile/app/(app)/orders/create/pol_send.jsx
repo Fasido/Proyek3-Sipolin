@@ -91,11 +91,48 @@ const POLSEND_IMAGES = {
   "mixue-jatibarang": require("../../../../assets/polsend/mixue-jatibarang.jpg"),
 };
 
+const POLSEND_MENU_IMAGES = {
+  // Gambar khusus rekomendasi/menu populer. Semua file taruh langsung di assets/polsend/.
+  // Kalau file belum diganti, placeholder tetap aman dan app tidak error.
+  "mp-1": require("../../../../assets/polsend/martabak-coklat.jpg"),
+  "mp-2": require("../../../../assets/polsend/martabak-keju.jpg"),
+  "mp-3": require("../../../../assets/polsend/martabak-telor.jpg"),
+
+  "mg-1": require("../../../../assets/polsend/mie-hompimpa.jpg"),
+  "mg-2": require("../../../../assets/polsend/mie-suit.jpg"),
+  "mg-3": require("../../../../assets/polsend/udang-keju.jpg"),
+  "mg-4": require("../../../../assets/polsend/udang-rambutan.jpg"),
+
+  "mk-1": require("../../../../assets/polsend/nasi-rames.jpg"),
+  "mk-2": require("../../../../assets/polsend/ayam-serundeng.jpg"),
+  "mk-3": require("../../../../assets/polsend/pedesan-entog-menu.jpg"),
+
+  "dp-1": require("../../../../assets/polsend/dimsum-ayam.jpg"),
+  "dp-2": require("../../../../assets/polsend/dimsum-udang.jpg"),
+
+  "sd-3": require("../../../../assets/polsend/seblak-ceker.jpg"),
+  "gj-3": require("../../../../assets/polsend/geprek-mozzarella.jpg"),
+};
+
 const getImageSource = (...keys) => {
   for (const key of keys) {
     if (key && POLSEND_IMAGES[String(key)]) return POLSEND_IMAGES[String(key)];
   }
   return POLSEND_IMAGES.warung;
+};
+
+const getMenuImageSource = (menu, merchant) => {
+  const menuId = menu?.id ? String(menu.id) : "";
+  if (menuId && POLSEND_MENU_IMAGES[menuId]) return POLSEND_MENU_IMAGES[menuId];
+
+  return getImageSource(
+    menu?.imageKey,
+    merchant?.id,
+    merchant?.imageKey,
+    menu?.category,
+    merchant?.category,
+    "warung"
+  );
 };
 
 const getParam = (value, fallback = "") => {
@@ -271,8 +308,12 @@ const MerchantCard = ({ merchant, onPress }) => (
 
 const RecommendedMenuCard = ({ item, merchant, onPress }) => (
   <TouchableOpacity activeOpacity={0.9} style={S.recoCard} onPress={onPress}>
-    <Image source={getImageSource(item.imageKey, merchant?.id, merchant?.imageKey, item.category)} style={S.recoImage} />
+    <Image source={getMenuImageSource(item, merchant)} style={S.recoImage} />
     <View style={S.recoGradient} />
+    <View style={S.recoAddBadge}>
+      <Feather name="plus" size={13} color={WHITE} strokeWidth={3} />
+      <Text style={S.recoAddText}>Tambah</Text>
+    </View>
     <View style={S.recoInfo}>
       <Text style={S.recoName} numberOfLines={2}>{item.name}</Text>
       <Text style={S.recoResto} numberOfLines={1}>{item.resto}</Text>
@@ -305,7 +346,7 @@ const QtyControl = ({ qty, onMinus, onPlus }) => {
 
 const MenuRow = ({ menu, qty, merchant, onPlus, onMinus }) => (
   <View style={S.menuRow}>
-    <Image source={getImageSource(menu.imageKey, merchant?.id, merchant?.imageKey, merchant?.category)} style={S.menuImage} />
+    <Image source={getMenuImageSource(menu, merchant)} style={S.menuImage} />
     <View style={{ flex: 1 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         <Text style={S.menuName} numberOfLines={1}>{menu.name}</Text>
@@ -980,7 +1021,7 @@ export default function PolSendScreen() {
           </View>
           {cart.map((item) => (
             <View key={item.id} style={S.checkoutItem}>
-              <Image source={getImageSource(item.imageKey, selectedMerchant.id, selectedMerchant.imageKey)} style={S.checkoutImage} />
+              <Image source={getMenuImageSource(item, selectedMerchant)} style={S.checkoutImage} />
               <View style={{ flex: 1 }}>
                 <Text style={S.checkoutItemName}>{item.name}</Text>
                 <Text style={S.checkoutItemSub}>{item.qty} x {formatRupiah(item.price)}</Text>
@@ -1306,6 +1347,24 @@ const S = StyleSheet.create({
     elevation: 3,
   },
   recoImage: { width: "100%", height: "100%" },
+  recoAddBadge: {
+    position: "absolute",
+    right: 10,
+    top: 10,
+    minHeight: 30,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: PRIMARY,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    shadowColor: PRIMARY,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  recoAddText: { color: WHITE, fontSize: 11, fontWeight: "900" },
   recoGradient: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.14)" },
   recoInfo: { position: "absolute", left: 12, right: 12, bottom: 12 },
   recoName: { color: WHITE, fontSize: 15, lineHeight: 18, fontWeight: "900" },
