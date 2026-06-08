@@ -23,7 +23,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Buat .env di sipolin-mobile:
 // EXPO_PUBLIC_API_URL=http://IP-LAPTOP:3000/api
 
-const DEFAULT_BASE_URL = "http://192.168.110.224:3000/api";
+const DEFAULT_BASE_URL = "http://192.168.55.22:3000/api";
 
 const RAW_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL &&
