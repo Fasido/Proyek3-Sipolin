@@ -1,36 +1,71 @@
 id,nama_tempat,kategori,sub_kategori,menu,lokasi,rating
-1,Seblak Jeletot,pedas,berkuah,Seblak Mercon,Bandung,4.7
-2,Sweet Dessert,manis,kering,Chocolate Ice Cream,Jakarta,4.8
-3,Warteg Bahari,asin,berkuah,Ayam Goreng,Cirebon,4.5
-4,Mie Gacoan,pedas,berkuah,Mie Level 8,Bandung,4.6
-5,Kopi Kenangan,minuman,minuman_dingin,Kopi Gula Aren,Loh bener,4.4
-6,Pecel Lele Lela,asin,goreng,Pecel Lele + Nasi,Tangerang,4.7
-7,Es Dawet Ayu,minuman,minuman_dingin,Es Dawet,Juntinyuat,4.5
-8,Bakso Pak Man,asin,berkuah,Bakso Urat,Solo,4.9
-9,Martabak Manis,dessert,goreng,Martabak Coklat Kacang,Bandung,4.8
-10,Thai Tea House,minuman,minuman_dingin,Thai Tea Original,Bangkir,4.6
-11,Ayam Geprek Juara,pedas,goreng,Ayam Geprek Level 5,Yogyakarta,4.8
-12,Ceker Setan,pedas,berkuah,Ceker Pedas Mercon,Surabaya,4.6
-13,Es Krim Nusantara,manis,minuman_dingin,Es Krim Durian,Karangampel,4.7
-14,Brownies Lumer,manis,kering,Brownies Coklat Lumer,Bandung,4.8
-15,Soto Lamongan,asin,berkuah,Soto Ayam Lamongan,Surabaya,4.7
-16,Nasi Padang Sederhana,asin,berkuah,Rendang + Nasi,Jakarta,4.9
-17,Wedang Jahe,minuman,minuman_hangat,Wedang Jahe Asli,Bandung,4.5
-18,Janji Jiwa,minuman,minuman_dingin,Kopi Susu Jiwa,indramayu kota,4.7
-19,Es Cendol,minuman,minuman_dingin,Es Cendol Dawet,Jatibarang,4.8
-20,Bubble Tea House,minuman,minuman_dingin,Bubble Tea Taro,Jakarta,4.6
-21,Es Jeruk Peras,minuman,minuman_dingin,Es Jeruk Asli,Jatibarang,4.7
-22,Es Kelapa Muda,minuman,minuman_dingin,Es Kelapa + Sirup,Surabaya,4.5
-23,Soda Gembira,minuman,minuman_dingin,Soda + Susu + Sirup,Karanga anyar,4.6
-24,Frappe Coffee,minuman,minuman_dingin,Frappe Caramel,Junti kebon,4.8
-25,Smoothie Bowl,minuman,minuman_dingin,Smoothie Mangga,Singajaya,4.7
-26,Bandrek,minuman,minuman_hangat,Bandrek Jahe Susu,Bandung,4.7
-27,Secang Hangat,minuman,minuman_hangat,Secang Jahe,Yogyakarta,4.5
-28,Kopi Kapal Api,minuman,minuman_hangat,Kopi Hitam Panas,Bandung,4.3
-29,Teh Tawar Hangat,minuman,minuman_hangat,Teh Tawar + Jahe,Jakarta,4.4
-30,Coklat Panas,minuman,minuman_hangat,Coklat Susu Panas,Bandung,4.6
-31,Bakwan Kriuk,asin,goreng,Bakwan Sayur,Jakarta,4.6
-32,Rawon Surabaya,asin,berkuah,Rawon Daging,Surabaya,4.8
-33,Tahu Walik,asin,goreng,Tahu Walik Isi Ayam,Surabaya,4.7
-34,Sop Buntut,asin,berkuah,Sop Buntut Sapi,Jakarta,4.9
-35,Keripik Pedas,pedas,goreng,Keripik Singkong Pedas,Bandung,4.5
+31,Seblak Jeletot,pedas,berkuah,Seblak Ceker Mercon,Sindang,4.8
+32,Mie Level 10,pedas,berkuah,Mie Pedas Level 10,Indramayu Kota,4.7
+33,Ayam Bakar Pak Dedi,asin,goreng,Ayam Bakar + Nasi,Lohbener,4.6
+34,Sate Madura Jaya,asin,goreng,Sate Ayam Bumbu Kacang,Jatibarang,4.8
+35,Bakso Beranak,pedas,berkuah,Bakso Beranak Jumbo,Sliyeg,4.7
+36,Kedai Kopi Senja,minuman,minuman_dingin,Es Kopi Susu,Sindang,4.8
+37,Es Teh Nusantara,minuman,minuman_dingin,Es Teh Jumbo,Indramayu Kota,4.5
+38,Warung Nasi Uduk,asin,goreng,Nasi Uduk Komplit,Karangampel,4.7
+39,Dessert Corner,manis,kering,Cheesecake Oreo,Juntinyuat,4.8
+40,Pisang Nugget Lumer,manis,goreng,Pisang Nugget Coklat,Widasari,4.6
+41,Cafe Rindu,minuman,minuman_dingin,Matcha Latte,Jatibarang,4.8
+42,Ceker Naga,pedas,berkuah,Ceker Setan Level 5,Lohbener,4.7
+43,Roti Bakar Legend,manis,kering,Roti Bakar Coklat Keju,Sindang,4.8
+44,Bebek Goreng Sultan,asin,goreng,Bebek Goreng Sambal Ijo,Indramayu Kota,4.9
+45,Soto Betawi Bang Jali,asin,berkuah,Soto Betawi,Juntinyuat,4.7
+46,Mie Ayam Pakde,asin,berkuah,Mie Ayam Bakso,Sliyeg,4.8
+47,Es Campur Segar,minuman,minuman_dingin,Es Campur Spesial,Karangampel,4.6
+48,Kedai Durian,manis,minuman_dingin,Es Durian Premium,Jatibarang,4.8
+49,Geprek Sultan,pedas,goreng,Ayam Geprek Mozarella,Sindang,4.9
+50,Nasi Goreng Gila,pedas,goreng,Nasi Goreng Gila,Indramayu Kota,4.7
+51,Bakso Lava,pedas,berkuah,Bakso Isi Sambal,Widasari,4.6
+52,Martabak Mini,manis,goreng,Martabak Red Velvet,Lohbener,4.7
+53,Kopi Kita,minuman,minuman_hangat,Kopi Tubruk,Sindang,4.5
+54,Wedang Uwuh,minuman,minuman_hangat,Wedang Uwuh Jahe,Juntinyuat,4.6
+55,Seblak Sultan,pedas,berkuah,Seblak Seafood,Karangampel,4.8
+56,Kedai Ayam Krispi,asin,goreng,Chicken Crispy Rice Bowl,Jatibarang,4.7
+57,Burger Nusantara,asin,goreng,Burger Beef Cheese,Indramayu Kota,4.8
+58,Cimol Bojot,pedas,goreng,Cimol Pedas Daun Jeruk,Sliyeg,4.6
+59,Cireng Isi,pedas,goreng,Cireng Ayam Pedas,Lohbener,4.7
+60,Kebab Timur Tengah,asin,goreng,Kebab Daging Sapi,Sindang,4.8
+61,Ice Blend Story,minuman,minuman_dingin,Chocolate Ice Blend,Indramayu Kota,4.8
+62,Es Teler Nusantara,minuman,minuman_dingin,Es Teler Alpukat,Juntinyuat,4.7
+63,Brown Sugar Cafe,minuman,minuman_dingin,Brown Sugar Milk,Sindang,4.8
+64,Sop Iga Maknyus,asin,berkuah,Sop Iga Sapi,Jatibarang,4.9
+65,Nasi Liwet Sunda,asin,berkuah,Nasi Liwet Komplit,Widasari,4.7
+66,Dimsum Family,asin,goreng,Dimsum Ayam Udang,Karangampel,4.8
+67,Kentang Spiral,pedas,goreng,Kentang Bumbu Balado,Indramayu Kota,4.5
+68,Sosis Bakar Mantap,asin,goreng,Sosis Bakar Jumbo,Lohbener,4.6
+69,Ayam Penyet Bu Haji,asin,goreng,Ayam Penyet Sambal Terasi,Sliyeg,4.8
+70,Pudding Lumer,manis,kering,Pudding Coklat Premium,Juntinyuat,4.7
+71,Milkshake Time,minuman,minuman_dingin,Milkshake Vanilla,Sindang,4.8
+72,Mie Bangladesh,pedas,berkuah,Mie Bangladesh Original,Indramayu Kota,4.7
+73,Seblak Bandung,pedas,berkuah,Seblak Komplit,Jatibarang,4.8
+74,Tahu Gejrot Cirebon,pedas,berkuah,Tahu Gejrot Original,Karangampel,4.6
+75,Es Kelapa Muda,minuman,minuman_dingin,Es Kelapa Original,Widasari,4.8
+76,Roti Kukus Premium,manis,kering,Roti Kukus Coklat,Sindang,4.7
+77,Bakmi Jawa,asin,berkuah,Bakmi Godog,Lohbener,4.8
+78,Ayam Rica Rica,pedas,goreng,Ayam Rica Rica Pedas,Juntinyuat,4.7
+79,Sop Ayam Kampung,asin,berkuah,Sop Ayam Kampung,Sliyeg,4.8
+80,Es Doger Segar,minuman,minuman_dingin,Es Doger Special,Indramayu Kota,4.7
+81,Kedai Coklat,minuman,minuman_hangat,Hot Chocolate,Sindang,4.6
+82,Mochi Ice Cream,manis,minuman_dingin,Mochi Matcha Ice Cream,Karangampel,4.8
+83,Nasi Kebuli Nusantara,asin,berkuah,Nasi Kebuli Ayam,Jatibarang,4.9
+84,Seblak Prasmanan,pedas,berkuah,Seblak Prasmanan,Sindang,4.8
+85,Gorengan Mak Ijah,asin,goreng,Bakwan Jagung,Lohbener,4.5
+86,Kedai Alpukat,minuman,minuman_dingin,Jus Alpukat Premium,Indramayu Kota,4.7
+87,Pentol Mercon,pedas,goreng,Pentol Isi Sambal,Widasari,4.6
+88,Ayam Serundeng,asin,goreng,Ayam Serundeng Komplit,Juntinyuat,4.8
+89,Lumpia Basah,pedas,goreng,Lumpia Basah Pedas,Sliyeg,4.7
+90,Sate Taichan,pedas,goreng,Sate Taichan Sambal Merah,Karangampel,4.8
+91,Es Buah Segar,minuman,minuman_dingin,Es Buah Campur,Jatibarang,4.7
+92,Cheese Cake House,manis,kering,Cheesecake Blueberry,Sindang,4.9
+93,Bakso Urat Juara,asin,berkuah,Bakso Urat Jumbo,Indramayu Kota,4.8
+94,Mie Kocok,pedas,berkuah,Mie Kocok Pedas,Lohbener,4.7
+95,Kopi Rempah,minuman,minuman_hangat,Kopi Jahe Rempah,Juntinyuat,4.6
+96,Ayam Bakar Taliwang,pedas,goreng,Ayam Taliwang,Widasari,4.8
+97,Smoothies Corner,minuman,minuman_dingin,Smoothies Strawberry,Karangampel,4.7
+98,Nasi Timbel Sunda,asin,berkuah,Nasi Timbel Komplit,Sliyeg,4.8
+99,Es Jelly Milk,minuman,minuman_dingin,Jelly Milk Brown Sugar,Sindang,4.7
+100,Seblak Polindra,pedas,berkuah,Seblak Komplit Polindra,Sindang,4.9
